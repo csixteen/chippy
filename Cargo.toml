@@ -1,0 +1,8 @@
+[package]
+name = "chippy"
+version = "0.1.0"
+authors = ["Pedro Rodrigues <csixteen@protonmail.com>"]
+edition = "2018"
+description = "A CHIP-8 Interpreter written in Rust"
+
+[dependencies]
