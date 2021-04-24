@@ -1,9 +1,10 @@
 const DISPLAY_WIDTH: usize  = 64;
 const DISPLAY_HEIGHT: usize = 32;
 
+#[derive(Default)]
 pub struct Chip8 {
-    mem: [u8; 4096],
-    stack: [u16; 16], // 16-level Stack
+    mem: Vec<u8>,
+    stack: Vec<u16>, // 16-level Stack
 
     // Registers - the register VF shouldn't be
     // used by programs, as it is used as a flag
@@ -30,7 +31,7 @@ pub struct Chip8 {
     // +---+---+---+---+
     keypad: [u8; 16],  // 16-key hexadecimal keypad
 
-    display: [u8; DISPLAY_WIDTH * DISPLAY_HEIGHT],
+    display: Vec<u8>,
 }
 
 // Preloaded sprite data representing a font of sixteen
@@ -54,19 +55,14 @@ const FONT_DATA: [u8; 80] = [
     0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 ];
 
-impl Default for Chip8 {
-    fn default() -> Chip8 {
-        Chip8 {
-            mem: [0_u8; 4096],
-            display: [0_u8; DISPLAY_WIDTH * DISPLAY_HEIGHT],
-            ..Default::default()
-        }
-    }
-}
-
 impl Chip8 {
     pub fn new(rom: Vec<u8>) -> Self {
-        Default::default()
+        Chip8 {
+            mem: vec![0_u8; 4096],
+            stack: vec![0_u16; 16],
+            display: vec![0_u8; DISPLAY_WIDTH * DISPLAY_HEIGHT],
+            ..Default::default()
+        }
     }
 
     pub fn fetch_decode_and_execute(&mut self) {
