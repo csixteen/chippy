@@ -1,7 +1,7 @@
 const DISPLAY_WIDTH: usize  = 64;
 const DISPLAY_HEIGHT: usize = 32;
 
-struct Chip8 {
+pub struct Chip8 {
     mem: [u8; 4096],
     stack: [u16; 16], // 16-level Stack
 
@@ -65,11 +65,8 @@ impl Default for Chip8 {
 }
 
 impl Chip8 {
-    pub fn new() -> Self {
+    pub fn new(rom: Vec<u8>) -> Self {
         Default::default()
-    }
-
-    pub fn load_program(&mut self, prog: Vec<u8>) {
     }
 
     pub fn fetch_decode_and_execute(&mut self) {

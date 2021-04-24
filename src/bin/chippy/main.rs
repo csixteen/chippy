@@ -6,6 +6,8 @@ use std::fs::File;
 
 use clap::{Arg, App};
 
+use chippy::emulator::Emulator;
+
 fn main() -> io::Result<()> {
     let matches = App::new("CHIP-8 interpreter written in Rust.")
                         .version("1.0.0")
@@ -22,6 +24,8 @@ fn main() -> io::Result<()> {
     let mut buffer = Vec::new();
 
     f.read_to_end(&mut buffer)?;
+
+    let mut c = Emulator::new(buffer);
 
     Ok(())
 }
