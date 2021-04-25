@@ -14,4 +14,13 @@ impl Emulator {
             running: false
         }
     }
+
+    pub fn run(&mut self) {
+        println!("Emulator running");
+        self.chip8.initialize();
+
+        loop {
+            self.chip8.fetch_decode_and_execute();
+        }
+    }
 }

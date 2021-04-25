@@ -26,6 +26,7 @@ fn main() -> io::Result<()> {
     f.read_to_end(&mut buffer)?;
 
     let mut c = Emulator::new(buffer);
+    c.run();
 
     Ok(())
 }

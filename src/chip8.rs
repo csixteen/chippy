@@ -65,6 +65,47 @@ impl Chip8 {
         }
     }
 
+    pub fn initialize(&mut self) {
+        self.i = 0;
+        self.sp = 0xF;
+        self.pc = 0x200;
+        self.delay_t = 0;
+        self.sound_t = 0;
+
+        for i in 0..16 { self.v_reg[i] = 0; }
+        for i in 0..16 { self.keypad[i] = 0; }
+        for i in 0..16 { self.stack[i] = 0; }
+    }
+
+    pub fn clear_display(&mut self) {
+        for i in 0..DISPLAY_WIDTH*DISPLAY_HEIGHT {
+            self.display[i] = 0;
+        }
+    }
+
+    // -------------------------------------------------
+    // Fetch, Decode and Execute
     pub fn fetch_decode_and_execute(&mut self) {
+        let opcode = self.fetch_opcode();
+        self.pc += 2;
+
+        self.execute_instruction(opcode);
+    }
+
+    fn fetch_opcode(&self) -> u16 {
+        (self.mem[self.pc as usize] as u16) << 8 |
+            (self.mem[self.pc as usize + 1] as u16)
+    }
+
+    // -------------------------------------------------
+    // Stack operations
+    fn push(&mut self, v: u16) {
+        self.stack[self.sp as usize] = v;
+        self.sp -= 1;
+    }
+
+    fn pop(&mut self) -> u16 {
+        self.sp += 1;
+        self.stack[self.sp as usize]
     }
 }
