@@ -125,7 +125,7 @@ mod tests {
         0x61, 0x01,  // Sets V1 to 0x1
         0x71, 0x01,  // V1 = V1 + 0x1
         0x31, 0x00,  // Skips next instruction if V1 == 0x0
-        0x12, 0x00,  // PC = 0x0200
+        0x12, 0x02,  // PC = 0x0202
         0x61, 0x01,  // Sets V1 to 0x1
         0x62, 0xFF,  // Sets V2 to 0xFF
         0x81, 0x24,  // Sets V1 to V1 + V2. VF should be set to 0x1
@@ -146,5 +146,17 @@ mod tests {
         c.fetch_decode_execute();
         assert_eq!(0x202, c.pc);
         assert_eq!(0x1, c.v_reg[0x1]);
+
+        for i in 0..=15 {
+            c.fetch_decode_execute();
+            assert_eq!(0x204, c.pc);
+            assert_eq!(0x2 + (i as u8), c.v_reg[0x1]);
+
+            c.fetch_decode_execute();
+            assert_eq!(0x206, c.pc);
+
+            c.fetch_decode_execute();
+            assert_eq!(c.pc, 0x202);
+        }
     }
 }
