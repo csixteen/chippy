@@ -29,7 +29,7 @@ const ROM_OFFSET: usize     = 0x200;
 #[derive(Default)]
 pub struct Chip8 {
     mem: Vec<u8>,
-    stack: Vec<u16>, // 16-level Stack
+    pub(crate) stack: Vec<u16>, // 16-level Stack
 
     // Registers - the register VF shouldn't be
     // used by programs, as it is used as a flag
@@ -43,7 +43,7 @@ pub struct Chip8 {
 
     // Pseudo-registers (not directly accessible to the user)
     pub(crate) pc: u16,  // Program Counter
-    sp: u8,   // Stack-Pointer
+    pub(crate) sp: u8,   // Stack-Pointer
 
     // +---------------+
     // | 1 | 2 | 3 | C |
@@ -125,18 +125,6 @@ impl Chip8 {
         (self.mem[self.pc as usize] as u16) << 8 |
             (self.mem[self.pc as usize + 1] as u16)
     }
-
-    // -------------------------------------------------
-    // Stack operations
-    fn push(&mut self, v: u16) {
-        self.stack[self.sp as usize] = v;
-        self.sp -= 1;
-    }
-
-    fn pop(&mut self) -> u16 {
-        self.sp += 1;
-        self.stack[self.sp as usize]
-    }
 }
 
 #[cfg(test)]
@@ -195,5 +183,11 @@ mod tests {
         c.fetch_decode_execute();
         assert_eq!(0x20C, c.pc);
         assert_eq!(0xFF, c.v_reg[0x2]);
+
+        c.fetch_decode_execute();
+        assert_eq!(0x20E, c.pc);
+        assert_eq!(0x0, c.v_reg[0x1]);
+        assert_eq!(0xFF, c.v_reg[0x2]);
+        assert_eq!(0x1, c.v_reg[0xF]);
     }
 }
