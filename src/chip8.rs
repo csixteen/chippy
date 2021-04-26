@@ -1,3 +1,5 @@
+use std::mem;
+
 const DISPLAY_WIDTH: usize  = 64;
 const DISPLAY_HEIGHT: usize = 32;
 
@@ -72,15 +74,13 @@ impl Chip8 {
         self.delay_t = 0;
         self.sound_t = 0;
 
-        for i in 0..16 { self.v_reg[i] = 0; }
-        for i in 0..16 { self.keypad[i] = 0; }
-        for i in 0..16 { self.stack[i] = 0; }
+        mem::take(&mut self.v_reg);
+        mem::take(&mut self.keypad);
+        mem::take(&mut self.stack);
     }
 
     pub fn clear_display(&mut self) {
-        for i in 0..DISPLAY_WIDTH*DISPLAY_HEIGHT {
-            self.display[i] = 0;
-        }
+        mem::take(&mut self.display);
     }
 
     // -------------------------------------------------
@@ -107,5 +107,28 @@ impl Chip8 {
     fn pop(&mut self) -> u16 {
         self.sp += 1;
         self.stack[self.sp as usize]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_ROM: [u8; 20] = [
+        0x61, 0x01,  // Sets V1 to 0x1
+        0x71, 0x01,  // V1 = V1 + 0x1
+        0x31, 0x00,  // Skips next instruction if V1 == 0x0
+        0x12, 0x00,  // PC = 0x0200
+        0x61, 0x01,  // Sets V1 to 0x1
+        0x62, 0xFF,  // Sets V2 to 0xFF
+        0x81, 0x24,  // Sets V1 to V1 + V2. VF should be set to 0x1
+        0xB2, 0x12,  // PC = V0 + 0x212
+        0xC2, 0x30,  // V2 = rand byte AND 0x30 (should be skipped because of last instruction)
+        0xFF, 0x1E,  // I = I + VF (should be 0x1)
+    ];
+
+    #[test]
+    fn test_new_chip8() {
+        let mut c = Chip8::new(TEST_ROM.to_vec());
     }
 }
