@@ -20,7 +20,7 @@ impl Emulator {
         self.chip8.initialize();
 
         loop {
-            self.chip8.fetch_decode_and_execute();
+            self.chip8.fetch_decode_execute();
         }
     }
 }

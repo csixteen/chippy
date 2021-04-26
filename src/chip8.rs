@@ -2,6 +2,7 @@ use std::mem;
 
 const DISPLAY_WIDTH: usize  = 64;
 const DISPLAY_HEIGHT: usize = 32;
+const ROM_OFFSET: usize     = 0x200;
 
 #[derive(Default)]
 pub struct Chip8 {
@@ -11,7 +12,7 @@ pub struct Chip8 {
     // Registers - the register VF shouldn't be
     // used by programs, as it is used as a flag
     // by some instructions
-    v_reg: [u8; 16],  // V0..VF
+    pub(crate) v_reg: [u8; 16],  // V0..VF
     i: u16, // used to store memory addresses. Only the lowest 12 bits are used
 
     // Timers
@@ -19,7 +20,7 @@ pub struct Chip8 {
     sound_t: u8,  // sound timer
 
     // Pseudo-registers (not directly accessible to the user)
-    pc: u16,  // Program Counter
+    pub(crate) pc: u16,  // Program Counter
     sp: u8,   // Stack-Pointer
 
     // +---------------+
@@ -59,8 +60,13 @@ const FONT_DATA: [u8; 80] = [
 
 impl Chip8 {
     pub fn new(rom: Vec<u8>) -> Self {
+        let mut mem = vec![0_u8; 4096];
+
+        (0..80).for_each(|i| { mem[i] = FONT_DATA[i]; });
+        (0..rom.len()).for_each(|i| { mem[i + ROM_OFFSET] = rom[i]; });
+
         Chip8 {
-            mem: vec![0_u8; 4096],
+            mem: mem,
             stack: vec![0_u16; 16],
             display: vec![0_u8; DISPLAY_WIDTH * DISPLAY_HEIGHT],
             ..Default::default()
@@ -77,6 +83,8 @@ impl Chip8 {
         mem::take(&mut self.v_reg);
         mem::take(&mut self.keypad);
         mem::take(&mut self.stack);
+
+        self.clear_display();
     }
 
     pub fn clear_display(&mut self) {
@@ -85,11 +93,10 @@ impl Chip8 {
 
     // -------------------------------------------------
     // Fetch, Decode and Execute
-    pub fn fetch_decode_and_execute(&mut self) {
+    pub fn fetch_decode_execute(&mut self) {
         let opcode = self.fetch_opcode();
-        self.pc += 2;
 
-        self.execute_instruction(opcode);
+        self.pc = self.execute_instruction(opcode);
     }
 
     fn fetch_opcode(&self) -> u16 {
@@ -130,5 +137,14 @@ mod tests {
     #[test]
     fn test_new_chip8() {
         let mut c = Chip8::new(TEST_ROM.to_vec());
+
+        c.initialize();
+
+        assert_eq!(0x200, c.pc);
+        assert_eq!(0x61, c.mem[c.pc as usize]);
+
+        c.fetch_decode_execute();
+        assert_eq!(0x202, c.pc);
+        assert_eq!(0x1, c.v_reg[0x1]);
     }
 }
