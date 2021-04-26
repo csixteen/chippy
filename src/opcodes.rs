@@ -69,7 +69,7 @@ impl Chip8 {
 
                 match opcode & 0xF {
                     // LD Vx, Vy
-                    0x0 => self.v_reg[vx as usize] = self.v_reg[vy as usize],
+                    0x0 => self.v_reg[vx as usize] = value_y,
                     // OR Vx, Vy
                     0x1 => self.v_reg[vx as usize] = value_x | value_y,
                     // AND Vx, Vy
