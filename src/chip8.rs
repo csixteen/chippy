@@ -22,10 +22,13 @@
 
 use std::mem;
 
+use crate::debug::DebugLog;
+
 const DISPLAY_WIDTH: usize  = 64;
 const DISPLAY_HEIGHT: usize = 32;
 const ROM_OFFSET: usize     = 0x200;
 const SPRITE_SIZE: usize    = 5;  // size in bytes
+const DEBUG_LOG_SIZE: usize = 32;
 
 #[derive(Default)]
 pub struct Chip8 {
@@ -59,6 +62,8 @@ pub struct Chip8 {
 
     display: Vec<u8>,
     draw: bool,
+
+    dbg_log: DebugLog,
 }
 
 // Preloaded sprite data representing a font of sixteen
@@ -93,6 +98,7 @@ impl Chip8 {
             mem: mem,
             stack: vec![0_u16; 16],
             display: vec![0_u8; DISPLAY_WIDTH * DISPLAY_HEIGHT],
+            dbg_log: DebugLog::new(DEBUG_LOG_SIZE),
             ..Default::default()
         }
     }
@@ -113,6 +119,7 @@ impl Chip8 {
 
     pub fn clear_display(&mut self) {
         mem::take(&mut self.display);
+        self.draw = true;
     }
 
     // -------------------------------------------------
@@ -145,36 +152,60 @@ impl Chip8 {
         let value = self.get_8bit_value(opcode);
         let nibble = self.get_4bit_value(opcode);
 
+        let log_entry: String;
+
         match opcode {
             // CLS
-            0x00E0 => self.clear_display(),
+            0x00E0 => {
+                self.clear_display();
+                log_entry = String::from("CLS");
+            },
             // RET
-            0x00EE => new_pc = self.pop() + 2,
+            0x00EE => {
+                new_pc = self.pop() + 2;
+                log_entry = String::from("RET");
+            },
             // JP addr
-            0x1000..=0x1FFF => new_pc = nnn,
+            0x1000..=0x1FFF => {
+                new_pc = nnn;
+                log_entry = format!("JP {}", nnn);
+            },
             // CALL addr
             0x2000..=0x2FFF => {
                 self.push(self.pc);
                 new_pc = nnn;
+                log_entry = format!("CALL {}", nnn);
             },
             // SE Vx, byte
-            0x3000..=0x3FFF => if self.v_reg[vx as usize] == value {
-                new_pc += 2;
+            0x3000..=0x3FFF => {
+                if self.v_reg[vx as usize] == value {
+                    new_pc += 2;
+                }
+                log_entry = format!("SE Vx, byte (V{} / {})", vx, value);
             },
             // SNE Vx, byte
-            0x4000..=0x4FFF => if self.v_reg[vx as usize] != value {
-                new_pc += 2;
+            0x4000..=0x4FFF => {
+                if self.v_reg[vx as usize] != value {
+                    new_pc += 2;
+                }
+                log_entry = format!("SNE Vx, byte (V{} / {})", vx, value);
             },
             // SE Vx, Vy
-            0x5000..=0x5FFF if opcode & 0x1 == 0x0 =>
+            0x5000..=0x5FFF if opcode & 0x1 == 0x0 => {
                 if self.v_reg[vx as usize] == self.v_reg[vy as usize] {
                     new_pc += 2;
-                },
+                }
+                log_entry = format!("SE Vx, Vy (V{} / V{})", vx, vy);
+            },
             // LD Vx, byte
-            0x6000..=0x6FFF => self.v_reg[vx as usize] = value,
+            0x6000..=0x6FFF => {
+                self.v_reg[vx as usize] = value;
+                log_entry = format!("LD Vx, byte (V{} / {})", vx, value);
+            },
             // ADD Vx, byte
             0x7000..=0x7FFF => {
                 self.v_reg[vx as usize] = self.v_reg[vx as usize].wrapping_add(value);
+                log_entry = format!("ADD Vx, byte (V{} / {})", vx, value);
             },
             0x8000..=0x8FFE => {
                 let value_x = self.v_reg[vx as usize];
@@ -182,109 +213,162 @@ impl Chip8 {
 
                 match opcode & 0xF {
                     // LD Vx, Vy
-                    0x0 => self.v_reg[vx as usize] = value_y,
+                    0x0 => {
+                        self.v_reg[vx as usize] = value_y;
+                        log_entry = format!("LD Vx, Vy (V{} / V{})", vx, vy);
+                    },
                     // OR Vx, Vy
-                    0x1 => self.v_reg[vx as usize] = value_x | value_y,
+                    0x1 => {
+                        self.v_reg[vx as usize] = value_x | value_y;
+                        log_entry = format!("OR Vx, Vy (V{} / V{})", vx, vy);
+                    },
                     // AND Vx, Vy
-                    0x2 => self.v_reg[vx as usize] = value_x & value_y,
+                    0x2 => {
+                        self.v_reg[vx as usize] = value_x & value_y;
+                        log_entry = format!("AND Vx, Vy (V{} / V{})", vx, vy);
+                    },
                     // XOR Vx, Vy
-                    0x3 => self.v_reg[vx as usize] = value_x ^ value_y,
+                    0x3 => {
+                        self.v_reg[vx as usize] = value_x ^ value_y;
+                        log_entry = format!("XOR Vx, Vy (V{} / V{})", vx, vy);
+                    },
                     // ADD Vx, Vy
                     0x4 => {
                         let (v, of) = value_x.overflowing_add(value_y);
                         self.v_reg[vx as usize] = v;
                         self.v_reg[0xF] = of as u8;
+                        log_entry = format!("AND Vx, Vy (V{} / V{})", vx, vy);
                     },
                     // SUB Vx, Vy
                     0x5 => {
                         let borrow = value_x < value_y;
                         self.v_reg[vx as usize] = value_x.wrapping_sub(value_y);
                         self.v_reg[0xF] = !borrow as u8;
+                        log_entry = format!("SUB Vx, Vy (V{} / V{})", vx, vy);
                     },
                     // SHR Vx {, Vy}
                     0x6 => {
                         self.v_reg[0xF] = value_x & 0x1;
                         self.v_reg[vx as usize] = value_x >> 1;
+                        log_entry = format!("SHR Vx (V{})", vx);
                     },
                     // SUBN Vx, Vy
                     0x7 => {
                         let borrow = value_y < value_x;
                         self.v_reg[vx as usize] = value_y.wrapping_sub(value_x);
                         self.v_reg[0xF] = !borrow as u8;
+                        log_entry = format!("SUBN Vx, Vy (V{} / V{})", vx, vy);
                     },
                     // SHL Vx {, Vy}
                     0x8 => {
                         self.v_reg[0xF] = value_x & 0x80;
                         self.v_reg[vx as usize] = value_x << 1;
+                        log_entry = format!("SHL Vx (V{})", vx);
                     },
-                    _ => (),
+                    _ => log_entry = format!("Unknown opcode: {}", opcode),
                 }
             },
             // SNE Vx, Vy
-            0x9000..=0x9FFF if opcode & 0x1 == 0x0 =>
+            0x9000..=0x9FFF if opcode & 0x1 == 0x0 => {
                 if self.v_reg[vx as usize] != self.v_reg[vy as usize] {
                     new_pc += 2;
-                },
+                }
+                log_entry = format!("SNE Vx, Vy (V{} / V{})", vx, vy);
+            },
             // LD I, addr
-            0xA000..=0xAFFF => self.i = nnn,
+            0xA000..=0xAFFF => {
+                self.i = nnn;
+                log_entry = format!("LD I, addr ({})", nnn);
+            },
             // JP V0, addr
-            0xB000..=0xBFFF => self.pc = nnn + (self.v_reg[0x0] as u16),
+            0xB000..=0xBFFF => {
+                self.pc = nnn + (self.v_reg[0x0] as u16);
+                log_entry = format!("JP V0, addr ({})", nnn);
+            },
             // RND Vx, byte
-            0xC000..=0xCFFF => self.v_reg[vx as usize] = value & rand::random::<u8>(),
+            0xC000..=0xCFFF => {
+                self.v_reg[vx as usize] = value & rand::random::<u8>();
+                log_entry = format!("RND Vx, byte (V{})", vx);
+            },
             // DRW Vx, Vy, nibble
             0xD000..=0xDFFF => {
                 self.v_reg[0xF] = self.draw(vx, vy, nibble) as u8;
-                self.draw = true;
+                log_entry = format!("DRW Vx, Vy, nibble (V{} / V{} / {})", vx, vy, nibble);
             },
             // SKP Vx
-            0xE09E..=0xEF9E if value == 0x9E =>
+            0xE09E..=0xEF9E if value == 0x9E => {
                 if self.keypad[self.v_reg[vx as usize] as usize] == 1 {
                     new_pc += 2;
-                },
+                }
+                log_entry = format!("SKP Vx (V{})", vx);
+            },
             // SKNP Vx
-            0xE0A1..=0xEFA1 if value == 0xA1 =>
+            0xE0A1..=0xEFA1 if value == 0xA1 => {
                 if self.keypad[self.v_reg[vx as usize] as usize] == 0 {
                     new_pc += 2;
-                },
+                }
+                log_entry = format!("SKNP Vx (V{})", vx);
+            },
             // LD Vx, DT
-            0xF007..=0xFF07 if value == 0x07 => self.v_reg[vx as usize] = self.delay_t,
+            0xF007..=0xFF07 if value == 0x07 => {
+                self.v_reg[vx as usize] = self.delay_t;
+                log_entry = format!("LD Vx, DT (V{})", vx);
+            },
             // LD Vx, K
-            0xF00A..=0xFF0A if value == 0x0A =>
+            0xF00A..=0xFF0A if value == 0x0A => {
                 if let Some(i) = self.key_pressed() {
                     self.v_reg[vx as usize] = i as u8;
                 } else {
                     new_pc -= 2;
-                },
+                }
+                log_entry = format!("LD Vx, K (V{})", vx);
+            },
             // LD DT, Vx
-            0xF015..=0xFF15 if value == 0x15 => self.delay_t = self.v_reg[vx as usize],
+            0xF015..=0xFF15 if value == 0x15 => {
+                self.delay_t = self.v_reg[vx as usize];
+                log_entry = format!("LD DT, Vx (V{})", vx);
+            },
             // LD ST, Vx
-            0xF018..=0xFF18 if value == 0x18 => self.sound_t = self.v_reg[vx as usize],
+            0xF018..=0xFF18 if value == 0x18 => {
+                self.sound_t = self.v_reg[vx as usize];
+                log_entry = format!("LD ST, Vx (V{})", vx);
+            },
             // ADD I, Vx
-            0xF01E..=0xFF1E if value == 0x1E => self.i += self.v_reg[vx as usize] as u16,
+            0xF01E..=0xFF1E if value == 0x1E => {
+                self.i += self.v_reg[vx as usize] as u16;
+                log_entry = format!("ADD I, Vx (V{})", vx);
+            },
             // LD F, Vx
-            0xF029..=0xFF29 if value == 0x29 =>
-                self.i = (self.v_reg[vx as usize] as u16) * (SPRITE_SIZE as u16),
+            0xF029..=0xFF29 if value == 0x29 => {
+                self.i = (self.v_reg[vx as usize] as u16) * (SPRITE_SIZE as u16);
+                log_entry = format!("LD F, Vx (V{})", vx);
+            },
             // LD B, Vx
             0xF033..=0xFF33 if value == 0x33 => {
                 let value_x = self.v_reg[vx as usize];
                 self.mem[self.i as usize] = value_x / 100;
                 self.mem[(self.i + 1) as usize] = (value_x % 100) / 10;
                 self.mem[(self.i + 2) as usize] = value_x % 10;
+                log_entry = format!("LD B, Vx (V{})", vx);
             },
             // LD [I], Vx
             0xF055..=0xFF55 if value == 0x55 => {
                 (0..=(vx as usize)).for_each(|x| {
                     self.mem[self.i as usize + x] = self.v_reg[x];
                 });
+                log_entry = format!("LD [I], Vx (V{})", vx);
             },
             // LD Vx, [I]
             0xF065..=0xFF65 if value == 0x65 => {
                 (0..=(vx as usize)).for_each(|i| {
                     self.v_reg[i] = self.mem[self.i as usize + i];
                 });
+                log_entry = format!("LD Vx, [I] (V{})", vx);
             },
-            _ => (),
+            _ => log_entry = format!("Unknown opcode: {}", opcode),
         }
+
+        self.dbg_log.push(log_entry);
 
         new_pc
     }
@@ -338,6 +422,8 @@ impl Chip8 {
                 }
             }
         }
+
+        self.draw = true;
 
         collision
     }
