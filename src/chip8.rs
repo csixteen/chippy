@@ -25,6 +25,7 @@ use std::mem;
 const DISPLAY_WIDTH: usize  = 64;
 const DISPLAY_HEIGHT: usize = 32;
 const ROM_OFFSET: usize     = 0x200;
+const SPRITE_SIZE: usize    = 5;  // size in bytes
 
 #[derive(Default)]
 pub struct Chip8 {
@@ -256,6 +257,32 @@ impl Chip8 {
                 },
             // LD DT, Vx
             0xF015..=0xFF15 if value == 0x15 => self.delay_t = self.v_reg[vx as usize],
+            // LD ST, Vx
+            0xF018..=0xFF18 if value == 0x18 => self.sound_t = self.v_reg[vx as usize],
+            // ADD I, Vx
+            0xF01E..=0xFF1E if value == 0x1E => self.i += self.v_reg[vx as usize] as u16,
+            // LD F, Vx
+            0xF029..=0xFF29 if value == 0x29 =>
+                self.i = (self.v_reg[vx as usize] as u16) * (SPRITE_SIZE as u16),
+            // LD B, Vx
+            0xF033..=0xFF33 if value == 0x33 => {
+                let value_x = self.v_reg[vx as usize];
+                self.mem[self.i as usize] = value_x / 100;
+                self.mem[(self.i + 1) as usize] = (value_x % 100) / 10;
+                self.mem[(self.i + 2) as usize] = value_x % 10;
+            },
+            // LD [I], Vx
+            0xF055..=0xFF55 if value == 0x55 => {
+                (0..=(vx as usize)).for_each(|x| {
+                    self.mem[self.i as usize + x] = self.v_reg[x];
+                });
+            },
+            // LD Vx, [I]
+            0xF065..=0xFF65 if value == 0x65 => {
+                (0..=(vx as usize)).for_each(|i| {
+                    self.v_reg[i] = self.mem[self.i as usize + i];
+                });
+            },
             _ => (),
         }
 
