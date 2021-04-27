@@ -15,4 +15,8 @@ impl DebugLog {
             self.0.pop_front();
         }
     }
+
+    pub fn last_entry(&self) -> Option<&String> {
+        self.0.back()
+    }
 }

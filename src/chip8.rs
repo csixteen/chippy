@@ -24,6 +24,7 @@ use std::mem;
 
 use crate::debug::DebugLog;
 
+const STACK_SIZE: usize     = 16;
 const DISPLAY_WIDTH: usize  = 64;
 const DISPLAY_HEIGHT: usize = 32;
 const ROM_OFFSET: usize     = 0x200;
@@ -33,7 +34,7 @@ const DEBUG_LOG_SIZE: usize = 32;
 #[derive(Default)]
 pub struct Chip8 {
     mem: Vec<u8>,
-    stack: Vec<u16>, // 16-level Stack
+    stack: [u16; STACK_SIZE],
 
     // Registers - the register VF shouldn't be
     // used by programs, as it is used as a flag
@@ -96,7 +97,6 @@ impl Chip8 {
 
         Chip8 {
             mem: mem,
-            stack: vec![0_u16; 16],
             display: vec![0_u8; DISPLAY_WIDTH * DISPLAY_HEIGHT],
             dbg_log: DebugLog::new(DEBUG_LOG_SIZE),
             ..Default::default()
@@ -118,7 +118,9 @@ impl Chip8 {
     }
 
     pub fn clear_display(&mut self) {
-        mem::take(&mut self.display);
+        for i in 0..self.display.len() {
+            self.display[i] = 0;
+        }
         self.draw = true;
     }
 
@@ -128,6 +130,8 @@ impl Chip8 {
         let opcode = self.fetch_opcode();
 
         self.pc = self.execute_instruction(opcode);
+
+        println!("{}", self.dbg_log.last_entry().unwrap());
 
         if self.delay_t > 0 {
             self.delay_t -= 1;
