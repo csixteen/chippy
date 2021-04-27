@@ -26,60 +26,43 @@ impl Chip8 {
     pub(crate) fn execute_instruction(&mut self, opcode: u16) -> u16 {
         let mut new_pc = self.pc + 2;
 
+        let vx = self.get_reg_x(opcode);
+        let vy = self.get_reg_y(opcode);
+        let nnn = opcode & 0xFFF;
+        let value = self.get_8bit_value(opcode);
+
         match opcode {
             // CLS
             0x00E0 => self.clear_display(),
             // RET
             0x00EE => new_pc = self.pop() + 2,
             // JP addr
-            0x1000..=0x1FFF => {
-                let addr: u16 = opcode & 0xFFF;
-                new_pc = addr;
-            },
+            0x1000..=0x1FFF => new_pc = nnn,
             // CALL addr
             0x2000..=0x2FFF => {
                 self.push(self.pc);
-                new_pc = opcode & 0x0FFF;
+                new_pc = nnn;
             },
             // SE Vx, byte
-            0x3000..=0x3FFF => {
-                let vx = self.get_reg_x(opcode);
-                let value = self.get_8bit_value(opcode);
-                if self.v_reg[vx as usize] == value {
-                    new_pc += 2;
-                }
+            0x3000..=0x3FFF => if self.v_reg[vx as usize] == value {
+                new_pc += 2;
             },
             // SNE Vx, byte
-            0x4000..=0x4FFF => {
-                let vx = self.get_reg_x(opcode);
-                let value = self.get_8bit_value(opcode);
-                if self.v_reg[vx as usize] != value {
-                    new_pc += 2;
-                }
+            0x4000..=0x4FFF => if self.v_reg[vx as usize] != value {
+                new_pc += 2;
             },
             // SE Vx, Vy
-            0x5000..=0x5FFF if opcode & 0x1 == 0x0 => {
-                let vx = self.get_reg_x(opcode);
-                let vy = self.get_reg_y(opcode);
+            0x5000..=0x5FFF if opcode & 0x1 == 0x0 =>
                 if self.v_reg[vx as usize] == self.v_reg[vy as usize] {
                     new_pc += 2;
-                }
-            },
+                },
             // LD Vx, byte
-            0x6000..=0x6FFF => {
-                let vx = self.get_reg_x(opcode);
-                let value = self.get_8bit_value(opcode);
-                self.v_reg[vx as usize] = value;
-            },
+            0x6000..=0x6FFF => self.v_reg[vx as usize] = value,
             // ADD Vx, byte
             0x7000..=0x7FFF => {
-                let vx = self.get_reg_x(opcode);
-                let value = self.get_8bit_value(opcode);
                 self.v_reg[vx as usize] = self.v_reg[vx as usize].wrapping_add(value);
             },
             0x8000..=0x8FFE => {
-                let vx = self.get_reg_x(opcode);
-                let vy = self.get_reg_y(opcode);
                 let value_x = self.v_reg[vx as usize];
                 let value_y = self.v_reg[vy as usize];
 
@@ -124,13 +107,16 @@ impl Chip8 {
                 }
             },
             // SNE Vx, Vy
-            0x9000..=0x9FFF if opcode & 0x1 == 0x0 => {
-                let vx = self.get_reg_x(opcode);
-                let vy = self.get_reg_y(opcode);
+            0x9000..=0x9FFF if opcode & 0x1 == 0x0 =>
                 if self.v_reg[vx as usize] != self.v_reg[vy as usize] {
                     new_pc += 2;
-                }
-            },
+                },
+            // LD I, addr
+            0xA000..=0xAFFF => self.i = nnn,
+            // JP V0, addr
+            0xB000..=0xBFFF => self.pc = nnn + (self.v_reg[0x0] as u16),
+            // RND Vx, byte
+            0xC000..=0xCFFF => self.v_reg[vx as usize] = value & rand::random::<u8>(),
             _ => (),
         }
 

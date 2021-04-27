@@ -35,7 +35,7 @@ pub struct Chip8 {
     // used by programs, as it is used as a flag
     // by some instructions
     pub(crate) v_reg: [u8; 16],  // V0..VF
-    i: u16, // used to store memory addresses. Only the lowest 12 bits are used
+    pub(crate) i: u16, // used to store memory addresses. Only the lowest 12 bits are used
 
     // Timers
     delay_t: u8,  // delay timer
