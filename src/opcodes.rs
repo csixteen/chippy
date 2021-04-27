@@ -96,7 +96,7 @@ impl Chip8 {
                     0x4 => {
                         let (v, of) = value_x.overflowing_add(value_y);
                         self.v_reg[vx as usize] = v;
-                        if of { self.v_reg[0xF] = 1; }
+                        self.v_reg[0xF] = of as u8;
                     },
                     // SUB Vx, Vy
                     0x5 => {
