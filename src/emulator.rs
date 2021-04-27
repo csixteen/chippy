@@ -29,6 +29,7 @@ use crate::chip8::{
 };
 
 use sdl2::pixels::Color;
+use sdl2::render::Canvas;
 
 const DISPLAY_SCALE: usize = 10;
 
@@ -45,9 +46,7 @@ impl Emulator {
         }
     }
 
-    pub fn run(&mut self) -> Result<(), String> {
-        self.chip8.initialize();
-
+    fn init_canvas(&self) -> Result<Canvas<sdl2::video::Window>, String> {
         let sdl_context = sdl2::init()?;
         let video_subsystem = sdl_context.video()?;
 
@@ -61,12 +60,18 @@ impl Emulator {
             .build()
             .map_err(|e| e.to_string())?;
 
-        let mut canvas = window
+        window
             .into_canvas()
             .target_texture()
             .present_vsync()
             .build()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| e.to_string())
+    }
+
+    pub fn run(&mut self) -> Result<(), String> {
+        self.chip8.initialize();
+
+        let mut canvas = self.init_canvas()?;
 
         println!("Using SDL_Renderer \"{}\"", canvas.info().name);
         canvas.set_draw_color(Color::RGB(0, 0, 0));
