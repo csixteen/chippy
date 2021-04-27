@@ -49,6 +49,22 @@ impl Chip8 {
                     new_pc += 2;
                 }
             },
+            // SNE Vx, byte
+            0x4000..=0x4FFF => {
+                let vx = self.get_reg_x(opcode);
+                let value = self.get_8bit_value(opcode);
+                if self.v_reg[vx as usize] != value {
+                    new_pc += 2;
+                }
+            },
+            // SE Vx, Vy
+            0x5000..=0x5FFF if opcode & 0x1 == 0x0 => {
+                let vx = self.get_reg_x(opcode);
+                let vy = self.get_reg_y(opcode);
+                if self.v_reg[vx as usize] == self.v_reg[vy as usize] {
+                    new_pc += 2;
+                }
+            },
             // LD Vx, byte
             0x6000..=0x6FFF => {
                 let vx = self.get_reg_x(opcode);
@@ -105,6 +121,14 @@ impl Chip8 {
                         self.v_reg[vx as usize] = value_x << 1;
                     },
                     _ => (),
+                }
+            },
+            // SNE Vx, Vy
+            0x9000..=0x9FFF if opcode & 0x1 == 0x0 => {
+                let vx = self.get_reg_x(opcode);
+                let vy = self.get_reg_y(opcode);
+                if self.v_reg[vx as usize] != self.v_reg[vy as usize] {
+                    new_pc += 2;
                 }
             },
             _ => (),
