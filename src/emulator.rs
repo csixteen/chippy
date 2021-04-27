@@ -20,7 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use crate::chip8::Chip8;
+extern crate sdl2;
+
+use crate::chip8::{
+    Chip8,
+    DISPLAY_HEIGHT,
+    DISPLAY_WIDTH
+};
+
+use sdl2::pixels::Color;
+
+const DISPLAY_SCALE: usize = 10;
 
 pub struct Emulator {
     chip8: Chip8,
@@ -35,13 +45,40 @@ impl Emulator {
         }
     }
 
-    pub fn run(&mut self) {
-        println!("Emulator running");
+    pub fn run(&mut self) -> Result<(), String> {
         self.chip8.initialize();
+
+        let sdl_context = sdl2::init()?;
+        let video_subsystem = sdl_context.video()?;
+
+        let window = video_subsystem
+            .window(
+                "Chippy - CHIP-8 Interpreter",
+                (DISPLAY_SCALE * DISPLAY_WIDTH) as u32,
+                (DISPLAY_SCALE * DISPLAY_HEIGHT) as u32,
+            )
+            .position_centered()
+            .build()
+            .map_err(|e| e.to_string())?;
+
+        let mut canvas = window
+            .into_canvas()
+            .target_texture()
+            .present_vsync()
+            .build()
+            .map_err(|e| e.to_string())?;
+
+        println!("Using SDL_Renderer \"{}\"", canvas.info().name);
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
+        canvas.present();
+
         self.running = true;
 
-        loop {
-            self.chip8.fetch_decode_execute();
-        }
+        //loop {
+            // self.chip8.fetch_decode_execute();
+        //}
+
+        Ok(())
     }
 }

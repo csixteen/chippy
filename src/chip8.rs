@@ -25,8 +25,8 @@ use std::mem;
 use crate::debug::DebugLog;
 
 const STACK_SIZE: usize     = 16;
-const DISPLAY_WIDTH: usize  = 64;
-const DISPLAY_HEIGHT: usize = 32;
+pub(crate) const DISPLAY_WIDTH: usize  = 64;
+pub(crate) const DISPLAY_HEIGHT: usize = 32;
 const ROM_OFFSET: usize     = 0x200;
 const SPRITE_SIZE: usize    = 5;  // size in bytes
 const DEBUG_LOG_SIZE: usize = 32;

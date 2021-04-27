@@ -22,7 +22,6 @@
 
 extern crate clap;
 
-use std::io;
 use std::io::prelude::*;
 use std::fs::File;
 
@@ -30,7 +29,7 @@ use clap::{Arg, App};
 
 use chippy::emulator::Emulator;
 
-fn main() -> io::Result<()> {
+fn main() -> Result<(), String> {
     let matches = App::new("CHIP-8 interpreter written in Rust.")
                         .version("1.0.0")
                         .author("Pedro Rodrigues <csixteen@protonmail.com>")
@@ -42,13 +41,11 @@ fn main() -> io::Result<()> {
                         .get_matches();
 
     let file_name = matches.value_of("file_name").unwrap();
-    let mut f = File::open(file_name)?;
+    let mut f = File::open(file_name).map_err(|e| e.to_string())?;
     let mut buffer = Vec::new();
 
-    f.read_to_end(&mut buffer)?;
+    f.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
 
     let mut c = Emulator::new(buffer);
-    c.run();
-
-    Ok(())
+    c.run()
 }
