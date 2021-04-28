@@ -24,9 +24,9 @@ use std::mem;
 
 use crate::debug::DebugLog;
 
+pub(crate) const DISPLAY_WIDTH: usize   = 64;
+pub(crate) const DISPLAY_HEIGHT: usize  = 32;
 const STACK_SIZE: usize     = 16;
-pub(crate) const DISPLAY_WIDTH: usize  = 64;
-pub(crate) const DISPLAY_HEIGHT: usize = 32;
 const ROM_OFFSET: usize     = 0x200;
 const SPRITE_SIZE: usize    = 5;  // size in bytes
 const DEBUG_LOG_SIZE: usize = 32;
@@ -62,7 +62,7 @@ pub struct Chip8 {
     keypad: [u8; 16],  // 16-key hexadecimal keypad
 
     display: Vec<u8>,
-    draw: bool,
+    pub(crate) draw: bool,
 
     dbg_log: DebugLog,
 }
@@ -124,6 +124,10 @@ impl Chip8 {
         self.draw = true;
     }
 
+    pub fn pixel_at(&self, row: usize, col: usize) -> u8 {
+        self.display[row * DISPLAY_WIDTH + col]
+    }
+
     // -------------------------------------------------
     // Fetch, Decode and Execute
     pub fn fetch_decode_execute(&mut self) {
@@ -131,7 +135,7 @@ impl Chip8 {
 
         self.pc = self.execute_instruction(opcode);
 
-        println!("{}", self.dbg_log.last_entry().unwrap());
+        //println!("{}", self.dbg_log.last_entry().unwrap());
 
         if self.delay_t > 0 {
             self.delay_t -= 1;
@@ -223,17 +227,17 @@ impl Chip8 {
                     },
                     // OR Vx, Vy
                     0x1 => {
-                        self.v_reg[vx as usize] = value_x | value_y;
+                        self.v_reg[vx as usize] |= value_y;
                         log_entry = format!("OR Vx, Vy (V{} / V{})", vx, vy);
                     },
                     // AND Vx, Vy
                     0x2 => {
-                        self.v_reg[vx as usize] = value_x & value_y;
+                        self.v_reg[vx as usize] &= value_y;
                         log_entry = format!("AND Vx, Vy (V{} / V{})", vx, vy);
                     },
                     // XOR Vx, Vy
                     0x3 => {
-                        self.v_reg[vx as usize] = value_x ^ value_y;
+                        self.v_reg[vx as usize] ^= value_y;
                         log_entry = format!("XOR Vx, Vy (V{} / V{})", vx, vy);
                     },
                     // ADD Vx, Vy
@@ -245,28 +249,28 @@ impl Chip8 {
                     },
                     // SUB Vx, Vy
                     0x5 => {
-                        let borrow = value_x < value_y;
-                        self.v_reg[vx as usize] = value_x.wrapping_sub(value_y);
-                        self.v_reg[0xF] = !borrow as u8;
+                        let (v, of) = value_x.overflowing_sub(value_y);
+                        self.v_reg[vx as usize] = v;
+                        self.v_reg[0xF] = !of as u8;
                         log_entry = format!("SUB Vx, Vy (V{} / V{})", vx, vy);
                     },
                     // SHR Vx {, Vy}
                     0x6 => {
                         self.v_reg[0xF] = value_x & 0x1;
-                        self.v_reg[vx as usize] = value_x >> 1;
+                        self.v_reg[vx as usize] >>= 1;
                         log_entry = format!("SHR Vx (V{})", vx);
                     },
                     // SUBN Vx, Vy
                     0x7 => {
-                        let borrow = value_y < value_x;
-                        self.v_reg[vx as usize] = value_y.wrapping_sub(value_x);
-                        self.v_reg[0xF] = !borrow as u8;
+                        let (v, of) = value_y.overflowing_sub(value_x);
+                        self.v_reg[vx as usize] = v;
+                        self.v_reg[0xF] = !of as u8;
                         log_entry = format!("SUBN Vx, Vy (V{} / V{})", vx, vy);
                     },
                     // SHL Vx {, Vy}
                     0x8 => {
                         self.v_reg[0xF] = value_x & 0x80;
-                        self.v_reg[vx as usize] = value_x << 1;
+                        self.v_reg[vx as usize] <<= 1;
                         log_entry = format!("SHL Vx (V{})", vx);
                     },
                     _ => log_entry = format!("Unknown opcode: {}", opcode),
@@ -339,7 +343,9 @@ impl Chip8 {
             },
             // ADD I, Vx
             0xF01E..=0xFF1E if value == 0x1E => {
-                self.i += self.v_reg[vx as usize] as u16;
+                let v = self.i + self.v_reg[vx as usize] as u16;
+                self.v_reg[0xF] = (v > 0xFFF) as u8;
+                self.i = v;
                 log_entry = format!("ADD I, Vx (V{})", vx);
             },
             // LD F, Vx
@@ -351,8 +357,8 @@ impl Chip8 {
             0xF033..=0xFF33 if value == 0x33 => {
                 let value_x = self.v_reg[vx as usize];
                 self.mem[self.i as usize] = value_x / 100;
-                self.mem[(self.i + 1) as usize] = (value_x % 100) / 10;
-                self.mem[(self.i + 2) as usize] = value_x % 10;
+                self.mem[(self.i + 1) as usize] = (value_x / 10) % 100;
+                self.mem[(self.i + 2) as usize] = (value_x % 100) % 10;
                 log_entry = format!("LD B, Vx (V{})", vx);
             },
             // LD [I], Vx
@@ -360,6 +366,7 @@ impl Chip8 {
                 (0..=(vx as usize)).for_each(|x| {
                     self.mem[self.i as usize + x] = self.v_reg[x];
                 });
+                self.i += (vx + 1) as u16;
                 log_entry = format!("LD [I], Vx (V{})", vx);
             },
             // LD Vx, [I]
@@ -367,6 +374,7 @@ impl Chip8 {
                 (0..=(vx as usize)).for_each(|i| {
                     self.v_reg[i] = self.mem[self.i as usize + i];
                 });
+                self.i += (vx + 1) as u16;
                 log_entry = format!("LD Vx, [I] (V{})", vx);
             },
             _ => log_entry = format!("Unknown opcode: {}", opcode),
@@ -416,13 +424,14 @@ impl Chip8 {
 
         for row in 0..(n as usize) {
             for col in 0..8 {
-                let dy = row + (vy as usize) % DISPLAY_HEIGHT;
-                let dx = col + (vx as usize) % DISPLAY_WIDTH;
-                let old = self.display[dy * DISPLAY_HEIGHT + dx];
-                let new = (self.mem[self.i as usize + row] >> col) & 0x1;
-                self.display[dy * DISPLAY_HEIGHT + dx] ^= new;
-                if (old & new) == 1 {
-                    collision = true;
+                let dy = row + (vy as usize);
+                let dx = col + (vx as usize);
+
+                if self.mem[self.i as usize + row] & (0x80 >> col) != 0 {
+                    if self.display[dy * DISPLAY_WIDTH + dx] == 1 {
+                        collision = true;
+                    }
+                    self.display[dy * DISPLAY_WIDTH + dx] ^= 1;
                 }
             }
         }

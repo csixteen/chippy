@@ -31,20 +31,19 @@ use crate::chip8::{
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 
 const DISPLAY_SCALE: usize = 10;
 
 pub struct Emulator {
     chip8: Chip8,
-    running: bool
 }
 
 impl Emulator {
     pub fn new(rom: Vec<u8>) -> Self {
         Emulator {
-            chip8: Chip8::new(rom.clone()),
-            running: false
+            chip8: Chip8::new(rom.clone())
         }
     }
 
@@ -77,16 +76,19 @@ impl Emulator {
         let mut canvas = self.init_canvas(&sdl_context)?;
 
         println!("Using SDL_Renderer \"{}\"", canvas.info().name);
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.set_draw_color(Color::RGBA(0, 0, 0, 255));
         canvas.clear();
         canvas.present();
 
         let mut event_pump = sdl_context.event_pump()?;
 
-        self.running = true;
-
         'running: loop {
             self.chip8.fetch_decode_execute();
+
+            if self.chip8.draw {
+                self.draw(&mut canvas);
+                self.chip8.draw = false;
+            }
 
             for event in event_pump.poll_iter() {
                 match event {
@@ -101,5 +103,29 @@ impl Emulator {
         }
 
         Ok(())
+    }
+
+    fn draw(&mut self, canvas: &mut Canvas<sdl2::video::Window>) {
+        canvas.set_draw_color(Color::RGBA(0, 0, 0, 255));
+        canvas.clear();
+
+        canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
+        for row in 0..DISPLAY_HEIGHT {
+            for col in 0..DISPLAY_WIDTH {
+                if self.chip8.pixel_at(row, col) != 0 {
+                    canvas.fill_rect(
+                        Rect::new(
+                            (col*DISPLAY_SCALE) as i32,
+                            (row*DISPLAY_SCALE) as i32,
+                            DISPLAY_SCALE as u32,
+                            DISPLAY_SCALE as u32
+                        )
+                    )
+                    .expect("could not fill rect");
+                }
+            }
+        }
+
+        canvas.present();
     }
 }
