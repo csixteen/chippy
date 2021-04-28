@@ -28,6 +28,8 @@ use crate::chip8::{
     DISPLAY_WIDTH
 };
 
+use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::render::Canvas;
 
@@ -46,9 +48,8 @@ impl Emulator {
         }
     }
 
-    fn init_canvas(&self) -> Result<Canvas<sdl2::video::Window>, String> {
-        let sdl_context = sdl2::init()?;
-        let video_subsystem = sdl_context.video()?;
+    fn init_canvas(&self, ctx: &sdl2::Sdl) -> Result<Canvas<sdl2::video::Window>, String> {
+        let video_subsystem = ctx.video()?;
 
         let window = video_subsystem
             .window(
@@ -71,18 +72,33 @@ impl Emulator {
     pub fn run(&mut self) -> Result<(), String> {
         self.chip8.initialize();
 
-        let mut canvas = self.init_canvas()?;
+        let sdl_context = sdl2::init()?;
+
+        let mut canvas = self.init_canvas(&sdl_context)?;
 
         println!("Using SDL_Renderer \"{}\"", canvas.info().name);
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
         canvas.present();
 
+        let mut event_pump = sdl_context.event_pump()?;
+
         self.running = true;
 
-        //loop {
-            // self.chip8.fetch_decode_execute();
-        //}
+        'running: loop {
+            self.chip8.fetch_decode_execute();
+
+            for event in event_pump.poll_iter() {
+                match event {
+                    Event::Quit { .. }
+                    | Event::KeyDown {
+                        keycode: Some(Keycode::Escape),
+                        ..
+                    } => break 'running,
+                    _ => {}
+                }
+            }
+        }
 
         Ok(())
     }
