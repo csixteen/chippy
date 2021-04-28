@@ -88,6 +88,12 @@ const FONT_DATA: [u8; 80] = [
     0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 ];
 
+enum ProgramCounter {
+    Next,
+    Skip,
+    Address(usize),
+}
+
 impl Chip8 {
     pub fn new(rom: Vec<u8>) -> Self {
         let mut mem = vec![0_u8; 4096];
@@ -105,7 +111,7 @@ impl Chip8 {
 
     pub fn initialize(&mut self) {
         self.i = 0;
-        self.sp = 0xF;
+        self.sp = 0;
         self.pc = ROM_OFFSET;
         self.delay_t = 0;
         self.sound_t = 0;
@@ -152,254 +158,118 @@ impl Chip8 {
     }
 
     fn execute_instruction(&mut self, opcode: u16) -> usize {
-        let mut new_pc = self.pc + 2;
+        let parts = (
+            ((opcode & 0xF000) >> 12) as usize,
+            ((opcode & 0x0F00) >> 8) as usize,
+            ((opcode & 0x00F0) >> 4) as usize,
+            (opcode & 0x000F) as usize
+        );
 
-        let vx = self.get_reg_x(opcode);
-        let vy = self.get_reg_y(opcode);
+        let vx = parts.1;
+        let vy = parts.2;
         let nnn = (opcode & 0xFFF) as usize;
-        let value = self.get_8bit_value(opcode);
-        let nibble = self.get_4bit_value(opcode);
+        let kk = (opcode & 0xFF) as u8;
+        let n = (opcode & 0xF) as usize;
 
         let log_entry: String;
 
-        match opcode {
-            // CLS
-            0x00E0 => {
-                self.clear_display();
-                log_entry = String::from("CLS");
-            },
-            // RET
-            0x00EE => {
-                new_pc = self.pop();
-                log_entry = String::from("RET");
-            },
-            // JP addr
-            0x1000..=0x1FFF => {
-                new_pc = nnn;
-                log_entry = format!("JP {}", nnn);
-            },
-            // CALL addr
-            0x2000..=0x2FFF => {
-                self.push(self.pc + 2);
-                new_pc = nnn;
-                log_entry = format!("CALL {}", nnn);
-            },
-            // SE Vx, byte
-            0x3000..=0x3FFF => {
-                if self.v_reg[vx] == value {
-                    new_pc += 2;
-                }
-                log_entry = format!("SE Vx, byte (V{} / {})", vx, value);
-            },
-            // SNE Vx, byte
-            0x4000..=0x4FFF => {
-                if self.v_reg[vx] != value {
-                    new_pc += 2;
-                }
-                log_entry = format!("SNE Vx, byte (V{} / {})", vx, value);
-            },
-            // SE Vx, Vy
-            0x5000..=0x5FFF if opcode & 0x1 == 0x0 => {
-                if self.v_reg[vx] == self.v_reg[vy] {
-                    new_pc += 2;
-                }
-                log_entry = format!("SE Vx, Vy (V{} / V{})", vx, vy);
-            },
-            // LD Vx, byte
-            0x6000..=0x6FFF => {
-                self.v_reg[vx] = value;
-                log_entry = format!("LD Vx, byte (V{} / {})", vx, value);
-            },
-            // ADD Vx, byte
-            0x7000..=0x7FFF => {
-                self.v_reg[vx] = self.v_reg[vx].wrapping_add(value);
-                log_entry = format!("ADD Vx, byte (V{} / {})", vx, value);
-            },
-            0x8000..=0x8FFE => {
-                let value_x = self.v_reg[vx];
-                let value_y = self.v_reg[vy];
+        let new_pc = match parts {
+            (0x0, 0x0, 0xE, 0x0) => self.execute_CLS(),
+            (0x0, 0x0, 0xE, 0xE) => self.execute_RET(),
+            (0x1, _, _, _)       => self.execute_JP_addr(nnn),
+            (0x2, _, _, _)       => self.execute_CALL_addr(nnn),
+            (0x3, _, _, _)       => self.execute_SE_Vx_kk(vx, kk),
+            (0x4, _, _, _)       => self.execute_SNE_Vx_kk(vx, kk),
+            (0x5, _, _, 0x0)     => self.execute_SE_Vx_Vy(vx, vy),
+            (0x6, _, _, _)       => self.execute_LD_Vx_kk(vx, kk),
+            (0x7, _, _, _)       => self.execute_ADD_Vx_kk(vx, kk),
+            (0x8, _, _, 0x0)     => self.execute_LD_Vx_Vy(vx, vy),
+            (0x8, _, _, 0x1)     => self.execute_OR_Vx_Vy(vx, vy),
+            (0x8, _, _, 0x2)     => self.execute_AND_Vx_Vy(vx, vy),
+            (0x8, _, _, 0x3)     => self.execute_XOR_Vx_Vy(vx, vy),
+            (0x8, _, _, 0x4)     => self.execute_ADD_Vx_Vy(vx, vy),
+            (0x8, _, _, 0x5)     => self.execute_SUB_Vx_Vy(vx, vy),
+            (0x8, _, _, 0x6)     => self.execute_SHR_Vx(vx),
+            (0x8, _, _, 0x7)     => self.execute_SUBN_Vx_Vy(vx, vy),
+            (0x8, _, _, 0xE)     => self.execute_SHL_Vx(vx),
+            (0x9, _, _, 0x0)     => self.execute_SNE_Vx_Vy(vx, vy),
+            (0xA, _, _, _)       => self.execute_LD_I_addr(nnn),
+            (0xB, _, _, _)       => self.execute_JP_V0_addr(nnn),
+            (0xC, _, _, _)       => self.execute_RND_Vx_kk(vx, kk),
+            (0xD, _, _, _)       => self.execute_DRW_Vx_Vy_n(vx, vy, n),
+            (0xE, _, 0x9, 0xE)   => self.execute_SKP_Vx(vx),
+            (0xE, _, 0xA, 0x1)   => self.execute_SKNP_Vx(vx),
+            (0xF, _, 0x0, 0x7)   => self.execute_LD_Vx_DT(vx),
+            (0xF, _, 0x0, 0xA)   => self.execute_LD_Vx_K(vx),
+            (0xF, _, 0x1, 0x5)   => self.execute_LD_DT_Vx(vx),
+            (0xF, _, 0x1, 0x8)   => self.execute_LD_ST_Vx(vx),
+            (0xF, _, 0x1, 0xE)   => self.execute_ADD_I_Vx(vx),
+            (0xF, _, 0x2, 0x9)   => self.execute_LD_F_Vx(vx),
+            (0xF, _, 0x3, 0x3)   => self.execute_LD_B_Vx(vx),
+            (0xF, _, 0x5, 0x5)   => self.execute_LD_I_Vx(vx),
+            (0xF, _, 0x6, 0x5)   => self.execute_LD_Vx_I(vx),
+            _                    => self.pc + 2,
+        };
 
-                match opcode & 0xF {
-                    // LD Vx, Vy
-                    0x0 => {
-                        self.v_reg[vx] = value_y;
-                        log_entry = format!("LD Vx, Vy (V{} / V{})", vx, vy);
-                    },
-                    // OR Vx, Vy
-                    0x1 => {
-                        self.v_reg[vx] |= value_y;
-                        log_entry = format!("OR Vx, Vy (V{} / V{})", vx, vy);
-                    },
-                    // AND Vx, Vy
-                    0x2 => {
-                        self.v_reg[vx] &= value_y;
-                        log_entry = format!("AND Vx, Vy (V{} / V{})", vx, vy);
-                    },
-                    // XOR Vx, Vy
-                    0x3 => {
-                        self.v_reg[vx] ^= value_y;
-                        log_entry = format!("XOR Vx, Vy (V{} / V{})", vx, vy);
-                    },
-                    // ADD Vx, Vy
-                    0x4 => {
-                        let (v, of) = value_x.overflowing_add(value_y);
-                        self.v_reg[vx] = v;
-                        self.v_reg[0xF] = of as u8;
-                        log_entry = format!("AND Vx, Vy (V{} / V{})", vx, vy);
-                    },
-                    // SUB Vx, Vy
-                    0x5 => {
-                        let (v, of) = value_x.overflowing_sub(value_y);
-                        self.v_reg[vx] = v;
-                        self.v_reg[0xF] = !of as u8;
-                        log_entry = format!("SUB Vx, Vy (V{} / V{})", vx, vy);
-                    },
-                    // SHR Vx {, Vy}
-                    0x6 => {
-                        self.v_reg[0xF] = value_x & 0x1;
-                        self.v_reg[vx] >>= 1;
-                        log_entry = format!("SHR Vx (V{})", vx);
-                    },
-                    // SUBN Vx, Vy
-                    0x7 => {
-                        let (v, of) = value_y.overflowing_sub(value_x);
-                        self.v_reg[vx] = v;
-                        self.v_reg[0xF] = !of as u8;
-                        log_entry = format!("SUBN Vx, Vy (V{} / V{})", vx, vy);
-                    },
-                    // SHL Vx {, Vy}
-                    0x8 => {
-                        self.v_reg[0xF] = value_x & 0x80;
-                        self.v_reg[vx] <<= 1;
-                        log_entry = format!("SHL Vx (V{})", vx);
-                    },
-                    _ => log_entry = format!("Unknown opcode: {}", opcode),
-                }
-            },
-            // SNE Vx, Vy
-            0x9000..=0x9FFF if opcode & 0x1 == 0x0 => {
-                if self.v_reg[vx] != self.v_reg[vy] {
-                    new_pc += 2;
-                }
-                log_entry = format!("SNE Vx, Vy (V{} / V{})", vx, vy);
-            },
-            // LD I, addr
-            0xA000..=0xAFFF => {
-                self.i = nnn;
-                log_entry = format!("LD I, addr ({})", nnn);
-            },
-            // JP V0, addr
-            0xB000..=0xBFFF => {
-                self.pc = nnn + (self.v_reg[0x0] as usize);
-                log_entry = format!("JP V0, addr ({})", nnn);
-            },
-            // RND Vx, byte
-            0xC000..=0xCFFF => {
-                self.v_reg[vx] = value & rand::random::<u8>();
-                log_entry = format!("RND Vx, byte (V{})", vx);
-            },
-            // DRW Vx, Vy, nibble
-            0xD000..=0xDFFF => {
-                self.v_reg[0xF] = self.draw(vx, vy, nibble) as u8;
-                log_entry = format!("DRW Vx, Vy, nibble (V{} / V{} / {})", vx, vy, nibble);
-            },
-            // SKP Vx
-            0xE09E..=0xEF9E if value == 0x9E => {
-                if self.keypad[self.v_reg[vx] as usize] == 1 {
-                    new_pc += 2;
-                }
-                log_entry = format!("SKP Vx (V{})", vx);
-            },
-            // SKNP Vx
-            0xE0A1..=0xEFA1 if value == 0xA1 => {
-                if self.keypad[self.v_reg[vx] as usize] == 0 {
-                    new_pc += 2;
-                }
-                log_entry = format!("SKNP Vx (V{})", vx);
-            },
-            // LD Vx, DT
-            0xF007..=0xFF07 if value == 0x07 => {
-                self.v_reg[vx] = self.delay_t;
-                log_entry = format!("LD Vx, DT (V{})", vx);
-            },
-            // LD Vx, K
-            0xF00A..=0xFF0A if value == 0x0A => {
-                if let Some(i) = self.key_pressed() {
-                    self.v_reg[vx] = i as u8;
-                } else {
-                    new_pc -= 2;
-                }
-                log_entry = format!("LD Vx, K (V{})", vx);
-            },
-            // LD DT, Vx
-            0xF015..=0xFF15 if value == 0x15 => {
-                self.delay_t = self.v_reg[vx];
-                log_entry = format!("LD DT, Vx (V{})", vx);
-            },
-            // LD ST, Vx
-            0xF018..=0xFF18 if value == 0x18 => {
-                self.sound_t = self.v_reg[vx];
-                log_entry = format!("LD ST, Vx (V{})", vx);
-            },
-            // ADD I, Vx
-            0xF01E..=0xFF1E if value == 0x1E => {
-                let v = self.i + self.v_reg[vx] as usize;
-                self.v_reg[0xF] = (v > 0xFFF) as u8;
-                self.i = v;
-                log_entry = format!("ADD I, Vx (V{})", vx);
-            },
-            // LD F, Vx
-            0xF029..=0xFF29 if value == 0x29 => {
-                self.i = (self.v_reg[vx] as usize) * SPRITE_SIZE;
-                log_entry = format!("LD F, Vx (V{})", vx);
-            },
-            // LD B, Vx
-            0xF033..=0xFF33 if value == 0x33 => {
-                let value_x = self.v_reg[vx];
-                self.mem[self.i] = value_x / 100;
-                self.mem[self.i + 1] = (value_x % 100) / 10;
-                self.mem[self.i + 2] = value_x % 10;
-                log_entry = format!("LD B, Vx (V{})", vx);
-            },
-            // LD [I], Vx
-            0xF055..=0xFF55 if value == 0x55 => {
-                (0..=vx).for_each(|x| {
-                    self.mem[self.i + x] = self.v_reg[x];
-                });
-                log_entry = format!("LD [I], Vx (V{})", vx);
-            },
-            // LD Vx, [I]
-            0xF065..=0xFF65 if value == 0x65 => {
-                (0..=vx).for_each(|i| {
-                    self.v_reg[i] = self.mem[self.i + i];
-                });
-                log_entry = format!("LD Vx, [I] (V{})", vx);
-            },
-            _ => log_entry = format!("Unknown opcode: {}", opcode),
+        match new_pc {
+            ProgramCounter::Next => self.pc + 2,
+            ProgramCounter::Skip => self.pc + 4,
+            ProgramCounter::Address(addr) => addr,
         }
-
-        self.dbg_log.push(log_entry);
-
-        new_pc
     }
 
-    // ---------------------------------------------------
-    // Operands helpers
-
-    fn get_reg_x(&self, opcode: u16) -> usize {
-        ((opcode >> 8) & 0xF) as usize
+    fn execute_CLS(&mut self) -> ProgramCounter {
+        self.clear_display();
+        ProgramCounter::Next
     }
 
-    fn get_reg_y(&self, opcode: u16) -> usize {
-        ((opcode >> 4) & 0xF) as usize
+    fn execute_RET(&mut self) -> ProgramCounter {
+        ProgramCounter::Address(self.pop())
     }
 
-    fn get_8bit_value(&self, opcode: u16) -> u8 {
-        (opcode & 0xFF) as u8
+    fn execute_JP_addr(&mut self, nnn: usize) -> ProgramCounter {
+        ProgramCounter::Address(nnn)
     }
 
-    fn get_4bit_value(&self, opcode: u16) -> usize {
-        (opcode & 0xF) as usize
+    fn execute_CALL_addr(&mut self, nnn: usize) -> ProgramCounter {
+        self.push(self.pc + 2);
+        ProgramCounter::Address(nnn)
+    }
+
+    fn execute_SE_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
+        if self.v_reg[vx] == kk {
+            ProgramCounter::Skip
+        } else {
+            ProgramCounter::Next
+        }
+    }
+
+    fn execute_SNE_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
+        if self.v_reg[vx] != kk {
+            ProgramCounter::Skip
+        } else {
+            ProgramCounter::Next
+        }
+    }
+
+    fn execute_SE_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        if self.v_reg[vx] == self.v_reg[vy] {
+            ProgramCounter::Skip
+        } else {
+            ProgramCounter::Next
+        }
+    }
+
+    fn execute_LD_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
+        self.v_reg[vx] = kk;
+        ProgramCounter::Next
+    }
+
+    fn execute_ADD_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
+        let val = self.v_reg[vx] as u16;
+        let kk = kk as u16;
+        self.v_reg[vx] = (val + kk) as u8;
+        ProgramCounter::Next
     }
 
     // -----------------------------------------------------
@@ -407,11 +277,11 @@ impl Chip8 {
 
     fn push(&mut self, v: usize) {
         self.stack[self.sp] = v;
-        self.sp -= 1;
+        self.sp += 1;
     }
 
     fn pop(&mut self) -> usize {
-        self.sp += 1;
+        self.sp -= 1;
         self.stack[self.sp]
     }
 

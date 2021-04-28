@@ -22,6 +22,9 @@
 
 extern crate sdl2;
 
+use std::thread;
+use std::time::Duration;
+
 use crate::chip8::{
     Chip8,
     DISPLAY_HEIGHT,
@@ -35,6 +38,7 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 
 const DISPLAY_SCALE: usize = 10;
+const SLEEP: u64 = 20;
 
 pub struct Emulator {
     chip8: Chip8,
@@ -74,8 +78,7 @@ impl Emulator {
 
         let mut canvas = self.init_canvas(&sdl_context)?;
 
-        println!("Using SDL_Renderer \"{}\"", canvas.info().name);
-        canvas.set_draw_color(Color::RGBA(0, 0, 0, 255));
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
         canvas.present();
 
@@ -99,21 +102,23 @@ impl Emulator {
                     _ => {}
                 }
             }
+
+            thread::sleep(Duration::from_millis(SLEEP));
         }
 
         Ok(())
     }
 
     fn draw(&mut self, canvas: &mut Canvas<sdl2::video::Window>) {
-        canvas.set_draw_color(Color::RGBA(0, 0, 0, 255));
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
         for row in 0..DISPLAY_HEIGHT {
             for col in 0..DISPLAY_WIDTH {
                 if self.chip8.pixel_at(row, col) != 0 {
-                    canvas.set_draw_color(Color::RGBA(255, 255, 0, 1));
+                    canvas.set_draw_color(Color::RGB(255, 255, 0));
                 } else {
-                    canvas.set_draw_color(Color::RGBA(0, 0, 0, 1));
+                    canvas.set_draw_color(Color::RGB(0, 0, 0));
                 }
                 canvas.fill_rect(
                     Rect::new(
