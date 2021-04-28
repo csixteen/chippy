@@ -57,13 +57,12 @@ impl Emulator {
                 (DISPLAY_SCALE * DISPLAY_HEIGHT) as u32,
             )
             .position_centered()
+            .opengl()
             .build()
             .map_err(|e| e.to_string())?;
 
         window
             .into_canvas()
-            .target_texture()
-            .present_vsync()
             .build()
             .map_err(|e| e.to_string())
     }
@@ -109,20 +108,22 @@ impl Emulator {
         canvas.set_draw_color(Color::RGBA(0, 0, 0, 255));
         canvas.clear();
 
-        canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
         for row in 0..DISPLAY_HEIGHT {
             for col in 0..DISPLAY_WIDTH {
                 if self.chip8.pixel_at(row, col) != 0 {
-                    canvas.fill_rect(
-                        Rect::new(
-                            (col*DISPLAY_SCALE) as i32,
-                            (row*DISPLAY_SCALE) as i32,
-                            DISPLAY_SCALE as u32,
-                            DISPLAY_SCALE as u32
-                        )
-                    )
-                    .expect("could not fill rect");
+                    canvas.set_draw_color(Color::RGBA(255, 255, 0, 1));
+                } else {
+                    canvas.set_draw_color(Color::RGBA(0, 0, 0, 1));
                 }
+                canvas.fill_rect(
+                    Rect::new(
+                        (col*DISPLAY_SCALE) as i32,
+                        (row*DISPLAY_SCALE) as i32,
+                        DISPLAY_SCALE as u32,
+                        DISPLAY_SCALE as u32
+                    )
+                )
+                .expect("could not fill rect");
             }
         }
 
