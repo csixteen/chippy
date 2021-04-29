@@ -38,7 +38,7 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 
 const DISPLAY_SCALE: usize = 10;
-const SLEEP: u64 = 2;
+const SLEEP: u64 = 10;
 
 pub struct Emulator {
     chip8: Chip8,
@@ -110,9 +110,6 @@ impl Emulator {
     }
 
     fn draw(&mut self, canvas: &mut Canvas<sdl2::video::Window>) {
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
-
         for row in 0..DISPLAY_HEIGHT {
             for col in 0..DISPLAY_WIDTH {
                 if self.chip8.pixel_at(row, col) != 0 {

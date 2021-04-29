@@ -1,5 +1,6 @@
 # chippy
-CHIP-8 Interpreter written in Rust
+
+CHIP-8 Interpreter written in Rust. **THIS IS STILL WORK IN PROGRESS AND QUITE BUGGY.**
 
 # References
 - [CHIP-8 Games Pack](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html)
