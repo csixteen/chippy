@@ -12,7 +12,7 @@ You'll definitely need to install the [SDL2.0 Development Libraries](https://www
 $ cargo run -- games/<GAME>
 ```
 
-You should replace `<GAME>` with whatever game tickles your fancy.
+You should replace `<GAME>` with whatever game tickles your fancy. The games under `games/` are [public domain](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html).
 
 # Testing
 
@@ -21,6 +21,10 @@ This definitely needs more coverage, but I wrote some simple tests just to give 
 ```bash
 $ cargo test
 ```
+
+# Screenshots
+
+![alt text](screenshots/Space_Invaders.png)
 
 # References
 - [CHIP-8 Games Pack](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html)
