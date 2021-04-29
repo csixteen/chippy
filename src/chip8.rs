@@ -72,7 +72,7 @@ pub struct Chip8 {
     // +---+---+---+---+
     // | A | 0 | B | F |
     // +---+---+---+---+
-    keypad: [bool; 16],  // 16-key hexadecimal keypad
+    pub(crate) keypad: [bool; 16],  // 16-key hexadecimal keypad
 
     display: Vec<u8>,
     pub(crate) draw: bool,
