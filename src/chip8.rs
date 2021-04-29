@@ -76,6 +76,7 @@ pub struct Chip8 {
 
     display: Vec<u8>,
     pub(crate) draw: bool,
+    pub(crate) beep: bool,
 
     dbg_log: DebugLog,
 }
@@ -116,6 +117,8 @@ impl Chip8 {
         if self.sound_t > 0 {
             self.sound_t -= 1;
         }
+
+        self.beep = self.sound_t > 0;
     }
 
     fn fetch_opcode(&self) -> u16 {
