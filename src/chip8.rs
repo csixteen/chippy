@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#![allow(non_snake_case)]
+
 use std::mem;
 
 use crate::debug::DebugLog;
@@ -92,6 +94,13 @@ enum ProgramCounter {
     Next,
     Skip,
     Address(usize),
+}
+
+impl ProgramCounter {
+    fn skip_if(cond: bool) -> ProgramCounter {
+        if cond { ProgramCounter::Skip }
+        else { ProgramCounter::Next }
+    }
 }
 
 impl Chip8 {
@@ -208,7 +217,7 @@ impl Chip8 {
             (0xF, _, 0x3, 0x3)   => self.execute_LD_B_Vx(vx),
             (0xF, _, 0x5, 0x5)   => self.execute_LD_I_Vx(vx),
             (0xF, _, 0x6, 0x5)   => self.execute_LD_Vx_I(vx),
-            _                    => self.pc + 2,
+            _                    => ProgramCounter::Next,
         };
 
         match new_pc {
@@ -224,7 +233,9 @@ impl Chip8 {
     }
 
     fn execute_RET(&mut self) -> ProgramCounter {
-        ProgramCounter::Address(self.pop())
+        self.sp -= 1;
+        let addr = self.stack[self.sp];
+        ProgramCounter::Address(addr)
     }
 
     fn execute_JP_addr(&mut self, nnn: usize) -> ProgramCounter {
@@ -232,32 +243,21 @@ impl Chip8 {
     }
 
     fn execute_CALL_addr(&mut self, nnn: usize) -> ProgramCounter {
-        self.push(self.pc + 2);
+        self.stack[self.sp] = self.pc + 2;
+        self.sp += 1;
         ProgramCounter::Address(nnn)
     }
 
     fn execute_SE_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
-        if self.v_reg[vx] == kk {
-            ProgramCounter::Skip
-        } else {
-            ProgramCounter::Next
-        }
+        ProgramCounter::skip_if(self.v_reg[vx] == kk)
     }
 
     fn execute_SNE_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
-        if self.v_reg[vx] != kk {
-            ProgramCounter::Skip
-        } else {
-            ProgramCounter::Next
-        }
+        ProgramCounter::skip_if(self.v_reg[vx] != kk)
     }
 
     fn execute_SE_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
-        if self.v_reg[vx] == self.v_reg[vy] {
-            ProgramCounter::Skip
-        } else {
-            ProgramCounter::Next
-        }
+        ProgramCounter::skip_if(self.v_reg[vx] == self.v_reg[vy])
     }
 
     fn execute_LD_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
@@ -272,22 +272,78 @@ impl Chip8 {
         ProgramCounter::Next
     }
 
-    // -----------------------------------------------------
-    // Stack manipulation helpers
-
-    fn push(&mut self, v: usize) {
-        self.stack[self.sp] = v;
-        self.sp += 1;
+    fn execute_LD_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        self.v_reg[vx] = self.v_reg[vy];
+        ProgramCounter::Next
     }
 
-    fn pop(&mut self) -> usize {
-        self.sp -= 1;
-        self.stack[self.sp]
+    fn execute_OR_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        self.v_reg[vx] |= self.v_reg[vy];
+        ProgramCounter::Next
     }
 
-    // -----------------------------------------------------
-    // Display helpers
-    fn draw(&mut self, vx: usize, vy: usize, n: usize) -> bool {
+    fn execute_AND_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        self.v_reg[vx] &= self.v_reg[vy];
+        ProgramCounter::Next
+    }
+
+    fn execute_XOR_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        self.v_reg[vx] ^= self.v_reg[vy];
+        ProgramCounter::Next
+    }
+
+    fn execute_ADD_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        let (v, of) = self.v_reg[vx].overflowing_add(self.v_reg[vy]);
+        self.v_reg[vx] = v;
+        self.v_reg[0xF] = of as u8;
+        ProgramCounter::Next
+    }
+
+    fn execute_SUB_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        let (v, of) = self.v_reg[vx].overflowing_sub(self.v_reg[vy]);
+        self.v_reg[vx] = v;
+        self.v_reg[0xF] = !of as u8;
+        ProgramCounter::Next
+    }
+
+    fn execute_SHR_Vx(&mut self, vx: usize) -> ProgramCounter {
+        self.v_reg[0xF] = self.v_reg[vx] & 0x1;
+        self.v_reg[vx] >>= 1;
+        ProgramCounter::Next
+    }
+
+    fn execute_SUBN_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        let (v, of) = self.v_reg[vy].overflowing_sub(self.v_reg[vx]);
+        self.v_reg[vx] = v;
+        self.v_reg[0xF] = !of as u8;
+        ProgramCounter::Next
+    }
+
+    fn execute_SHL_Vx(&mut self, vx: usize) -> ProgramCounter {
+        self.v_reg[0xF] = self.v_reg[vx] & 0x80;
+        self.v_reg[vx] <<= 1;
+        ProgramCounter::Next
+    }
+
+    fn execute_SNE_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
+        ProgramCounter::skip_if(self.v_reg[vx] != self.v_reg[vy])
+    }
+
+    fn execute_LD_I_addr(&mut self, nnn: usize) -> ProgramCounter {
+        self.i = nnn;
+        ProgramCounter::Next
+    }
+
+    fn execute_JP_V0_addr(&mut self, nnn: usize) -> ProgramCounter {
+        ProgramCounter::Address(nnn + (self.v_reg[0x0] as usize))
+    }
+
+    fn execute_RND_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
+        self.v_reg[vx] = kk & rand::random::<u8>();
+        ProgramCounter::Next
+    }
+
+    fn execute_DRW_Vx_Vy_n(&mut self, vx: usize, vy: usize, n: usize) -> ProgramCounter {
         let mut collision = false;
 
         for row in 0..n {
@@ -300,9 +356,76 @@ impl Chip8 {
             }
         }
 
+        self.v_reg[0xF] = collision as u8;
         self.draw = true;
 
-        collision
+        ProgramCounter::Next
+    }
+
+    fn execute_SKP_Vx(&mut self, vx: usize) -> ProgramCounter {
+        ProgramCounter::skip_if(self.keypad[self.v_reg[vx] as usize] == 1)
+    }
+
+    fn execute_SKNP_Vx(&mut self, vx: usize) -> ProgramCounter {
+        ProgramCounter::skip_if(self.keypad[self.v_reg[vx] as usize] == 0)
+    }
+
+    fn execute_LD_Vx_DT(&mut self, vx: usize) -> ProgramCounter {
+        self.v_reg[vx] = self.delay_t;
+        ProgramCounter::Next
+    }
+
+    fn execute_LD_Vx_K(&mut self, vx: usize) -> ProgramCounter {
+        if let Some(i) = self.key_pressed() {
+            self.v_reg[vx] = i as u8;
+            ProgramCounter::Next
+        } else {
+            ProgramCounter::Address(self.pc)
+        }
+    }
+
+    fn execute_LD_DT_Vx(&mut self, vx: usize) -> ProgramCounter {
+        self.delay_t = self.v_reg[vx];
+        ProgramCounter::Next
+    }
+
+    fn execute_LD_ST_Vx(&mut self, vx: usize) -> ProgramCounter {
+        self.sound_t = self.v_reg[vx];
+        ProgramCounter::Next
+    }
+
+    fn execute_ADD_I_Vx(&mut self, vx: usize) -> ProgramCounter {
+        let v = self.i + self.v_reg[vx] as usize;
+        self.v_reg[0xF] = (v > 0xFFF) as u8;
+        self.i = v;
+        ProgramCounter::Next
+    }
+
+    fn execute_LD_F_Vx(&mut self, vx: usize) -> ProgramCounter {
+        self.i = (self.v_reg[vx] as usize) * SPRITE_SIZE;
+        ProgramCounter::Next
+    }
+
+    fn execute_LD_B_Vx(&mut self, vx: usize) -> ProgramCounter {
+        let value_x = self.v_reg[vx];
+        self.mem[self.i] = value_x / 100;
+        self.mem[self.i + 1] = (value_x % 100) / 10;
+        self.mem[self.i + 2] = value_x % 10;
+        ProgramCounter::Next
+    }
+
+    fn execute_LD_I_Vx(&mut self, vx: usize) -> ProgramCounter {
+        (0..=vx).for_each(|x| {
+            self.mem[self.i + x] = self.v_reg[x];
+        });
+        ProgramCounter::Next
+    }
+
+    fn execute_LD_Vx_I(&mut self, vx: usize) -> ProgramCounter {
+        (0..=vx).for_each(|i| {
+            self.v_reg[i] = self.mem[self.i + i];
+        });
+        ProgramCounter::Next
     }
 
     fn key_pressed(&self) -> Option<usize> {

@@ -38,7 +38,7 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 
 const DISPLAY_SCALE: usize = 10;
-const SLEEP: u64 = 20;
+const SLEEP: u64 = 2;
 
 pub struct Emulator {
     chip8: Chip8,
