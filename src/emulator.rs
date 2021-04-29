@@ -27,8 +27,8 @@ use std::time::Duration;
 
 use crate::chip8::{
     Chip8,
-    DISPLAY_HEIGHT,
-    DISPLAY_WIDTH
+    CHIP8_HEIGHT,
+    CHIP8_WIDTH
 };
 
 use sdl2::event::Event;
@@ -38,7 +38,7 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 
 const DISPLAY_SCALE: usize = 10;
-const SLEEP: u64 = 10;
+const SLEEP: u64 = 2;
 
 pub struct Emulator {
     chip8: Chip8,
@@ -47,7 +47,7 @@ pub struct Emulator {
 impl Emulator {
     pub fn new(rom: Vec<u8>) -> Self {
         Emulator {
-            chip8: Chip8::new(rom.clone())
+            chip8: Chip8::new(rom)
         }
     }
 
@@ -57,31 +57,30 @@ impl Emulator {
         let window = video_subsystem
             .window(
                 "Chippy - CHIP-8 Interpreter",
-                (DISPLAY_SCALE * DISPLAY_WIDTH) as u32,
-                (DISPLAY_SCALE * DISPLAY_HEIGHT) as u32,
+                (DISPLAY_SCALE * CHIP8_WIDTH) as u32,
+                (DISPLAY_SCALE * CHIP8_HEIGHT) as u32,
             )
             .position_centered()
             .opengl()
             .build()
             .map_err(|e| e.to_string())?;
 
-        window
+        let mut canvas = window
             .into_canvas()
             .build()
-            .map_err(|e| e.to_string())
-    }
-
-    pub fn run(&mut self) -> Result<(), String> {
-        self.chip8.initialize();
-
-        let sdl_context = sdl2::init()?;
-
-        let mut canvas = self.init_canvas(&sdl_context)?;
+            .map_err(|e| e.to_string())?;
 
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
         canvas.present();
 
+        Ok(canvas)
+    }
+
+    pub fn run(&mut self) -> Result<(), String> {
+        let sdl_context = sdl2::init()?;
+
+        let mut canvas = self.init_canvas(&sdl_context)?;
         let mut event_pump = sdl_context.event_pump()?;
 
         'running: loop {
@@ -110,12 +109,12 @@ impl Emulator {
     }
 
     fn draw(&mut self, canvas: &mut Canvas<sdl2::video::Window>) {
-        for row in 0..DISPLAY_HEIGHT {
-            for col in 0..DISPLAY_WIDTH {
-                if self.chip8.pixel_at(row, col) != 0 {
-                    canvas.set_draw_color(Color::RGB(255, 255, 0));
-                } else {
+        for row in 0..CHIP8_HEIGHT {
+            for col in 0..CHIP8_WIDTH {
+                if self.chip8.pixel_at(row, col) == 0 {
                     canvas.set_draw_color(Color::RGB(0, 0, 0));
+                } else {
+                    canvas.set_draw_color(Color::RGB(255, 255, 0));
                 }
                 canvas.fill_rect(
                     Rect::new(

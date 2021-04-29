@@ -8,4 +8,8 @@ description = "A CHIP-8 Interpreter written in Rust"
 [dependencies]
 clap = "2.33.0"
 rand = "0.8.3"
-sdl2 = "0.34"
+
+[dependencies.sdl2]
+version = "0.34"
+default-features = false
+features = ["gfx"]
