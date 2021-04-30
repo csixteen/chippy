@@ -48,8 +48,8 @@ pub struct Cpu {
     // Registers - the register VF shouldn't be
     // used by programs, as it is used as a flag
     // by some instructions
-    pub(super)v_reg: [u8; 16],  // V0..VF
-    pub(super) i: usize, // used to store memory addresses. Only the lowest 12 bits are used
+    pub(super) v_reg: [u8; 16],  // V0..VF
+    pub(super) i: usize,         // used to store memory addresses. Only the lowest 12 bits are used
 
     // Timers
     pub(super) delay_t: u8,  // delay timer
@@ -57,7 +57,7 @@ pub struct Cpu {
 
     // Pseudo-registers (not directly accessible to the user)
     pub(super) pc: usize,  // Program Counter
-    pub(super) sp: usize,   // Stack-Pointer
+    pub(super) sp: usize,  // Stack-Pointer
 
     // +---------------+
     // | 1 | 2 | 3 | C |
@@ -90,8 +90,6 @@ impl Cpu {
         }
     }
 
-    // -------------------------------------------------
-    // Fetch, Decode and Execute
     pub fn fetch_decode_execute(&mut self) {
         let opcode = self.fetch_opcode();
 
@@ -176,6 +174,7 @@ impl Cpu {
         self.keypad.iter().position(|&k| k)
     }
 }
+
 //
 // Preloaded sprite data representing a font of sixteen
 // hexadecimal digits.
