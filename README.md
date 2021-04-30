@@ -44,7 +44,7 @@ This is what you'll find in the box:
 └── lib.rs
 ```
 
-There is nothng super fancy. I tried to keep the code as simple as possible. After having read lots of code from other emulators out there (in several languages), this is the structure that made more sense to me. Inside `chip8` directory, you'll find the actual representation and implementation of the (sort of) CPU. Essentially, this is the piece responsible for executing instructions and storing the state in memory (including display memory), stack or registers. On the other hand, the `emulator` is what turns that state into something visible (or audible). It glues together the CHIP-8 interpreter (emulator, whatever you want to call it) and the drivers for Audio, Display and Input (only Keyboard). Those drivers use the SDL2 bindings for Rust to display the actual graphics, produce sound and capture input from the keyboard.
+There is nothing super fancy. I tried to keep the code as simple as possible. After having read lots of code from other emulators out there (in several languages), this is the structure that made more sense to me. Inside `chip8` directory, you'll find the actual representation and implementation of the (sort of) CPU. Essentially, this is the piece responsible for executing instructions and storing the state in memory (including display memory), stack or registers. On the other hand, the `emulator` is what turns that state into something visible (or audible). It glues together the CHIP-8 interpreter (emulator, whatever you want to call it) and the drivers for Audio, Display and Input (only Keyboard). Those drivers use the SDL2 bindings for Rust to display the actual graphics, produce sound and capture input from the keyboard.
 
 # Screenshots
 
