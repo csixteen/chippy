@@ -36,29 +36,30 @@ impl KeyboardDriver {
             .collect();
 
         for key in keys {
-            let index = match key {
+            let k = match key {
                 Keycode::Num1 => Some(0x1),
                 Keycode::Num2 => Some(0x2),
                 Keycode::Num3 => Some(0x3),
-                Keycode::Num4 => Some(0xc),
+                Keycode::Num4 => Some(0xC),
+
                 Keycode::Q => Some(0x4),
                 Keycode::W => Some(0x5),
                 Keycode::E => Some(0x6),
-                Keycode::R => Some(0xd),
+                Keycode::R => Some(0xD),
+
                 Keycode::A => Some(0x7),
                 Keycode::S => Some(0x8),
                 Keycode::D => Some(0x9),
-                Keycode::F => Some(0xe),
-                Keycode::Z => Some(0xa),
+                Keycode::F => Some(0xE),
+
+                Keycode::Z => Some(0xA),
                 Keycode::X => Some(0x0),
-                Keycode::C => Some(0xb),
-                Keycode::V => Some(0xf),
+                Keycode::C => Some(0xB),
+                Keycode::V => Some(0xF),
                 _ => None,
             };
 
-            if let Some(i) = index {
-                keypad[i] = true;
-            }
+            if let Some(i) = k { keypad[i] = true; }
         }
 
         Ok(())

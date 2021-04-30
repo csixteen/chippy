@@ -22,5 +22,4 @@
 
 pub mod emulator;
 mod chip8;
-mod debug;
 mod drivers;
