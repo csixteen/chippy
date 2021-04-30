@@ -20,31 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-extern crate clap;
-
-use std::io::prelude::*;
-use std::fs::File;
-
-use clap::{Arg, App};
-
-use chippy::emulator::Emulator;
-
-fn main() -> Result<(), String> {
-    let matches = App::new("CHIP-8 interpreter written in Rust.")
-                        .version("1.0.0")
-                        .author("Pedro Rodrigues <csixteen@protonmail.com>")
-                        .arg(Arg::with_name("file_name")
-                             .value_name("FILE")
-                             .help("CHIP-8 program source file.")
-                             .takes_value(true)
-                             .required(true))
-                        .get_matches();
-
-    let file_name = matches.value_of("file_name").unwrap();
-    let mut f = File::open(file_name).map_err(|e| e.to_string())?;
-    let mut buffer = Vec::new();
-
-    f.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
-
-    Emulator::run(buffer)
-}
+pub mod audio;
+pub mod keyboard;
+pub mod video;

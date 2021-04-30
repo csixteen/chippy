@@ -74,7 +74,7 @@ pub struct Chip8 {
     // +---+---+---+---+
     pub(crate) keypad: [bool; 16],  // 16-key hexadecimal keypad
 
-    display: Vec<u8>,
+    pub(crate) display: Vec<u8>,
     pub(crate) draw: bool,
     pub(crate) beep: bool,
 
@@ -95,10 +95,6 @@ impl Chip8 {
             dbg_log: DebugLog::new(DEBUG_LOG_SIZE),
             ..Default::default()
         }
-    }
-
-    pub fn pixel_at(&self, row: usize, col: usize) -> u8 {
-        self.display[row * CHIP8_WIDTH + col]
     }
 
     // -------------------------------------------------
