@@ -1,8 +1,8 @@
 # chippy
 
-CHIP-8 Interpreter written in Rust (**THIS IS STILL WORK IN PROGRESS**).
+CHIP-8 Interpreter written in Rust.
 
-Most of the code for input (keyboard) and output (audio and display) was shamelessly copied from the examples found in [rust-sdl2](https://github.com/Rust-SDL2/rust-sdl2) repository. The code is still not pretty, especially in `emulator.rs`, but like Kent Beck says: "Make it work. Make it right. Make it fast.". Right now, it sort of works.
+Most of the code for input (keyboard) and output (audio and display) was shamelessly copied from the examples found in [rust-sdl2](https://github.com/Rust-SDL2/rust-sdl2) repository.
 
 # Usage
 
@@ -21,6 +21,30 @@ This definitely needs more coverage, but I wrote some simple tests just to give 
 ```bash
 $ cargo test
 ```
+
+# Project structure
+
+This is what you'll find in the box:
+
+```
+.
+├── bin
+│   └── chippy
+│       └── main.rs
+├── chip8
+│   ├── cpu.rs
+│   ├── mod.rs
+│   └── opcodes.rs
+├── drivers
+│   ├── audio.rs
+│   ├── keyboard.rs
+│   ├── mod.rs
+│   └── video.rs
+├── emulator.rs
+└── lib.rs
+```
+
+There is nothng super fancy. I tried to keep the code as simple as possible. After having read lots of code from other emulators out there (in several languages), this is the structure that made more sense to me. Inside `chip8` directory, you'll find the actual representation and implementation of the (sort of) CPU. Essentially, this is the piece responsible for executing instructions and storing the state in memory (including display memory), stack or registers. On the other hand, the `emulator` is what turns that state into something visible (or audible). It glues together the CHIP-8 interpreter (emulator, whatever you want to call it) and the drivers for Audio, Display and Input (only Keyboard). Those drivers use the SDL2 bindings for Rust to display the actual graphics, produce sound and capture input from the keyboard.
 
 # Screenshots
 

@@ -29,7 +29,7 @@ use super::cpu::{
     ProgramCounter
 };
 
-const SPRITE_SIZE: usize    = 5;  // size in bytes
+const SPRITE_SIZE: usize = 5;  // size in bytes
 
 impl Cpu {
     // 00E0 - CLS
