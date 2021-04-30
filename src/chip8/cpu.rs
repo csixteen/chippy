@@ -24,8 +24,8 @@
 
 pub(crate) const CHIP8_WIDTH: usize   = 64;
 pub(crate) const CHIP8_HEIGHT: usize  = 32;
-const STACK_SIZE: usize     = 16;
-const ROM_OFFSET: usize     = 0x200;
+const STACK_SIZE: usize               = 16;
+const ROM_OFFSET: usize               = 0x200;
 
 pub(super) enum ProgramCounter {
     Next,
