@@ -25,7 +25,7 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-use crate::chip8::cpu::{CHIP8_HEIGHT,CHIP8_WIDTH};
+use crate::chip8::cpu::{CHIP8_HEIGHT,CHIP8_WIDTH,Display};
 
 const DISPLAY_SCALE: usize = 10;
 
@@ -59,7 +59,7 @@ impl VideoDriver {
         VideoDriver { canvas }
     }
 
-    pub fn draw(&mut self, data: &[u8; CHIP8_HEIGHT * CHIP8_WIDTH]) {
+    pub fn draw(&mut self, data: &Display) {
         for row in 0..CHIP8_HEIGHT {
             for col in 0..CHIP8_WIDTH {
                 self.canvas.set_draw_color(

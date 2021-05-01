@@ -22,6 +22,8 @@
 
 #![allow(non_snake_case)]
 
+use std::ops::{Index,IndexMut};
+
 pub(crate) const CHIP8_WIDTH: usize   = 64;
 pub(crate) const CHIP8_HEIGHT: usize  = 32;
 const STACK_SIZE: usize               = 16;
@@ -40,11 +42,25 @@ impl ProgramCounter {
     }
 }
 
-pub(crate) struct Display(pub [u8; CHIP8_HEIGHT * CHIP8_WIDTH]);
+pub(crate) struct Display([u8; CHIP8_HEIGHT * CHIP8_WIDTH]);
 
 impl Default for Display {
     fn default() -> Self {
         Display([0_u8; CHIP8_HEIGHT * CHIP8_WIDTH])
+    }
+}
+
+impl Index<usize> for Display {
+    type Output = u8;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl IndexMut<usize> for Display {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
     }
 }
 

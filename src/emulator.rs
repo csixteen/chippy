@@ -47,7 +47,7 @@ impl Emulator {
             chip8.fetch_decode_execute();
 
             if chip8.draw {
-                video.draw(&chip8.display.0);
+                video.draw(&chip8.display);
                 chip8.draw = false;
             }
 
