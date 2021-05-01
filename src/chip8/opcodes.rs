@@ -92,9 +92,7 @@ impl Cpu {
     // 7xkk - ADD Vx, byte
     // Set Vx = Vx + kk.
     pub(super) fn execute_ADD_Vx_kk(&mut self, vx: usize, kk: u8) -> ProgramCounter {
-        let val = self.v_reg[vx] as u16;
-        let kk = kk as u16;
-        self.v_reg[vx] = (val + kk) as u8;
+        self.v_reg[vx] = self.v_reg[vx].wrapping_add(kk);
         ProgramCounter::Next
     }
 
@@ -129,19 +127,18 @@ impl Cpu {
     // 8xy4 - ADD Vx, Vy
     // Set Vx = Vx + Vy, set VF = carry.
     pub(super) fn execute_ADD_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
-        let x = self.v_reg[vx] as u16;
-        let y = self.v_reg[vy] as u16;
-        let result = x + y;
-        self.v_reg[vx] = result as u8;
-        self.v_reg[0xF] = if result > 0xFF { 1 } else { 0 };
+        let (v, of) = self.v_reg[vx].overflowing_add(self.v_reg[vy]);
+        self.v_reg[vx] = v;
+        self.v_reg[0xF] = of as u8;
         ProgramCounter::Next
     }
 
     // 8xy5 - SUB Vx, Vy
     // Set Vx = Vx - Vy, set VF = NOT borrow.
     pub(super) fn execute_SUB_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
-        self.v_reg[0xF] = if self.v_reg[vx] > self.v_reg[vy] { 1 } else { 0 };
-        self.v_reg[vx] = self.v_reg[vx].wrapping_sub(self.v_reg[vy]);
+        let (v, of) = self.v_reg[vx].overflowing_sub(self.v_reg[vy]);
+        self.v_reg[vx] = v;
+        self.v_reg[0xF] = !of as u8;
         ProgramCounter::Next
     }
 
@@ -156,8 +153,9 @@ impl Cpu {
     // 8xy7 - SUBN Vx, Vy
     // Set Vx = Vy - Vx, set VF = NOT borrow.
     pub(super) fn execute_SUBN_Vx_Vy(&mut self, vx: usize, vy: usize) -> ProgramCounter {
-        self.v_reg[0xF] = if self.v_reg[vy] > self.v_reg[vx] { 1 } else { 0 };
-        self.v_reg[vx] = self.v_reg[vy].wrapping_sub(self.v_reg[vx]);
+        let (v, of) = self.v_reg[vy].overflowing_sub(self.v_reg[vx]);
+        self.v_reg[vx] = v;
+        self.v_reg[0xF] = !of as u8;
         ProgramCounter::Next
     }
 
