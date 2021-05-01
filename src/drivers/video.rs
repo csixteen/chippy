@@ -25,22 +25,22 @@ use sdl2::rect::Rect;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
+use crate::chip8::cpu::{CHIP8_HEIGHT,CHIP8_WIDTH};
+
 const DISPLAY_SCALE: usize = 10;
 
 pub(crate) struct VideoDriver {
     canvas: Canvas<Window>,
-    width: usize,
-    height: usize
 }
 
 impl VideoDriver {
-    pub fn new(ctx: &sdl2::Sdl, w: usize, h: usize) -> Self {
+    pub fn new(ctx: &sdl2::Sdl) -> Self {
         let video_subsystem = ctx.video().unwrap();
         let window = video_subsystem
             .window(
                 "Chippy - CHIP-8 Interpreter",
-                (DISPLAY_SCALE * w) as u32,
-                (DISPLAY_SCALE * h) as u32,
+                (DISPLAY_SCALE * CHIP8_WIDTH) as u32,
+                (DISPLAY_SCALE * CHIP8_HEIGHT) as u32,
             )
             .position_centered()
             .opengl()
@@ -56,18 +56,14 @@ impl VideoDriver {
         canvas.clear();
         canvas.present();
 
-        VideoDriver {
-            canvas: canvas,
-            width: w,
-            height: h
-        }
+        VideoDriver { canvas }
     }
 
-    pub fn draw(&mut self, data: &Vec<u8>) {
-        for row in 0..self.height {
-            for col in 0..self.width {
+    pub fn draw(&mut self, data: &[u8; CHIP8_HEIGHT * CHIP8_WIDTH]) {
+        for row in 0..CHIP8_HEIGHT {
+            for col in 0..CHIP8_WIDTH {
                 self.canvas.set_draw_color(
-                    VideoDriver::color(data[row * self.width + col])
+                    VideoDriver::color(data[row * CHIP8_WIDTH + col])
                 );
 
                 self.canvas.fill_rect(

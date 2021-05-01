@@ -40,6 +40,14 @@ impl ProgramCounter {
     }
 }
 
+pub(crate) struct Display(pub [u8; CHIP8_HEIGHT * CHIP8_WIDTH]);
+
+impl Default for Display {
+    fn default() -> Self {
+        Display([0_u8; CHIP8_HEIGHT * CHIP8_WIDTH])
+    }
+}
+
 #[derive(Default)]
 pub struct Cpu {
     pub(super) mem: Vec<u8>,
@@ -70,7 +78,7 @@ pub struct Cpu {
     // +---+---+---+---+
     pub(crate) keypad: [bool; 16],  // 16-key hexadecimal keypad
 
-    pub(crate) display: Vec<u8>,
+    pub(crate) display: Display,
     pub(crate) draw: bool,
     pub(crate) beep: bool,
 }
@@ -85,7 +93,6 @@ impl Cpu {
         Cpu {
             pc: ROM_OFFSET,
             mem: mem,
-            display: vec![0_u8; CHIP8_WIDTH * CHIP8_HEIGHT],
             ..Default::default()
         }
     }

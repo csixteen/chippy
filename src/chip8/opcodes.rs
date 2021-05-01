@@ -22,6 +22,8 @@
 
 #![allow(non_snake_case)]
 
+use std::mem;
+
 use super::cpu::{
     CHIP8_HEIGHT,
     CHIP8_WIDTH,
@@ -35,9 +37,7 @@ impl Cpu {
     // 00E0 - CLS
     // Clear the display.
     pub(super) fn execute_CLS(&mut self) -> ProgramCounter {
-        for i in 0..self.display.len() {
-            self.display[i] = 0;
-        }
+        mem::take(&mut self.display);
         self.draw = true;
         ProgramCounter::Next
     }
@@ -206,8 +206,8 @@ impl Cpu {
                 let dx = (col + self.v_reg[vx] as usize) % CHIP8_WIDTH;
                 let dy = (row + self.v_reg[vy] as usize) % CHIP8_HEIGHT;
                 let color = (self.mem[self.i + row] >> (7 - col)) & 1;
-                self.v_reg[0xF] |= color & self.display[dy * CHIP8_WIDTH + dx];
-                self.display[dy * CHIP8_WIDTH + dx] ^= color;
+                self.v_reg[0xF] |= color & self.display.0[dy * CHIP8_WIDTH + dx];
+                self.display.0[dy * CHIP8_WIDTH + dx] ^= color;
             }
         }
 

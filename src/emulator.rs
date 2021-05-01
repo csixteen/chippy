@@ -25,7 +25,7 @@ extern crate sdl2;
 use std::thread;
 use std::time::Duration;
 
-use crate::chip8::cpu::{Cpu,CHIP8_HEIGHT,CHIP8_WIDTH};
+use crate::chip8::cpu::Cpu;
 use crate::drivers::audio::AudioDriver;
 use crate::drivers::keyboard::KeyboardDriver;
 use crate::drivers::video::VideoDriver;
@@ -40,14 +40,14 @@ impl Emulator {
 
         let mut chip8 = Cpu::new(rom);
         let mut keyboard = KeyboardDriver::new(&sdl_context);
-        let mut video = VideoDriver::new(&sdl_context, CHIP8_WIDTH, CHIP8_HEIGHT);
+        let mut video = VideoDriver::new(&sdl_context);
         let audio = AudioDriver::new(&sdl_context);
 
         loop {
             chip8.fetch_decode_execute();
 
             if chip8.draw {
-                video.draw(&chip8.display);
+                video.draw(&chip8.display.0);
                 chip8.draw = false;
             }
 
