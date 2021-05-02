@@ -14,11 +14,7 @@ You should replace `<GAME>` with whatever game tickles your fancy. The games und
 
 # Testing
 
-This definitely needs more coverage, but I wrote some simple tests just to give me some confidence.
-
-```bash
-$ cargo test
-```
+Working on it.
 
 # Screenshots
 
