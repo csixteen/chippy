@@ -132,10 +132,10 @@ impl Cpu {
 
     fn execute_instruction(&mut self, opcode: u16) -> u16 {
         let parts = (
-            ((opcode & 0xF000) >> 12) as usize,
+            ((opcode & 0xF000) >> 12) as u8,
             ((opcode & 0x0F00) >> 8) as usize,
             ((opcode & 0x00F0) >> 4) as usize,
-            (opcode & 0x000F) as usize
+            (opcode & 0x000F) as u8
         );
 
         let vx = parts.1;
