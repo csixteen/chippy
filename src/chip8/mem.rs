@@ -130,3 +130,55 @@ const FONT_DATA: [u8; 80] = [
     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
     0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct DummyRom;
+
+    impl AddressSpace for DummyRom {
+        fn read_byte(&self, _addr: u16) -> u8 { 0 }
+        fn write_byte(&mut self, _value: u8, _addr: u16) {}
+    }
+
+    struct TestRom([u8; 20]);
+
+    impl AddressSpace for TestRom {
+        fn read_byte(&self, addr: u16) -> u8 {
+            self.0[addr as usize]
+        }
+
+        fn write_byte(&mut self, value: u8, addr: u16) {
+            self.0[addr as usize] = value;
+        }
+    }
+
+    const TEST_ROM: [u8; 20] = [
+        0x61, 0x01,  // Sets V1 to 0x1
+        0x71, 0x01,  // V1 = V1 + 0x1
+        0x31, 0x00,  // Skips next instruction if V1 == 0x0
+        0x12, 0x02,  // PC = 0x0202
+        0x61, 0x01,  // Sets V1 to 0x1
+        0x62, 0xFF,  // Sets V2 to 0xFF
+        0x81, 0x24,  // Sets V1 to V1 + V2. VF should be set to 0x1
+        0xB2, 0x12,  // PC = V0 + 0x212
+        0xC2, 0x30,  // V2 = rand byte AND 0x30 (should be skipped because of last instruction)
+        0xFF, 0x1E,  // I = I + VF (should be 0x1)
+    ];
+
+    #[test]
+    fn test_memory_mapper() {
+        let mm = Memory::new(Box::new(TestRom(TEST_ROM)));
+
+        assert_eq!(0x61, mm.read_byte(RESERVED_MEMORY_SIZE as u16));
+        assert_eq!(0x6101, mm.read_word(RESERVED_MEMORY_SIZE as u16));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_write_to_reserved_memory() {
+        let mut mm = Memory::new(Box::new(DummyRom));
+        mm.write_byte(0xF, 0x0);
+    }
+}
