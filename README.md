@@ -2,9 +2,11 @@
 
 CHIP-8 Interpreter written in Rust.
 
-# Usage
+# Dependencies
 
-You'll definitely need to install the [SDL2.0 Development Libraries](https://www.libsdl.org/). I'd suggest for you to check [rust-sdl2](https://github.com/Rust-SDL2/rust-sdl2)'s README, since it covers scenarios that may be relevant to you. Once you have SDL2 installed, you can simply run:
+You'll need to install the [SDL2.0 Development Libraries](https://www.libsdl.org/). The README of the [rust-sdl2](https://github.com/Rust-SDL2/rust-sdl2) project has very detailed information on how to install it in different platforms and it also covers scenarios that may be relevant to you.
+
+# Usage
 
 ```bash
 $ cargo run -- games/<GAME>
@@ -14,7 +16,9 @@ You should replace `<GAME>` with whatever game tickles your fancy. The games und
 
 # Testing
 
-Working on it.
+```bash
+$ cargo test
+```
 
 # Screenshots
 
