@@ -18,7 +18,11 @@ Working on it.
 
 # Screenshots
 
+## Space Invaders
 ![alt text](screenshots/Space_Invaders.png)
+
+## Blinky
+![alt text](screenshots/Blinky.png)
 
 # References
 - [CHIP-8 Games Pack](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html)
