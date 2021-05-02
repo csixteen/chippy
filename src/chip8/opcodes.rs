@@ -205,8 +205,8 @@ impl Cpu {
                 let dx = (col + self.v_reg[vx] as usize) % CHIP8_WIDTH;
                 let dy = (row + self.v_reg[vy] as usize) % CHIP8_HEIGHT;
                 let color = (self.mem.read_byte(self.i + (row as u16)) >> (7 - col)) & 1;
-                self.v_reg[0xF] |= color & self.display[dy * CHIP8_WIDTH + dx];
-                self.display[dy * CHIP8_WIDTH + dx] ^= color;
+                self.v_reg[0xF] |= color & self.display[(dx, dy)];
+                self.display[(dx, dy)] ^= color;
             }
         }
 

@@ -56,17 +56,17 @@ impl Default for Display {
     }
 }
 
-impl Index<usize> for Display {
+impl Index<(usize, usize)> for Display {
     type Output = u8;
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        &self.0[index.1 * CHIP8_WIDTH + index.0]
     }
 }
 
-impl IndexMut<usize> for Display {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.0[index]
+impl IndexMut<(usize, usize)> for Display {
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        &mut self.0[index.1 * CHIP8_WIDTH + index.0]
     }
 }
 

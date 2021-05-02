@@ -60,16 +60,16 @@ impl VideoDriver {
     }
 
     pub fn draw(&mut self, data: &Display) {
-        for row in 0..CHIP8_HEIGHT {
-            for col in 0..CHIP8_WIDTH {
+        for y in 0..CHIP8_HEIGHT {
+            for x in 0..CHIP8_WIDTH {
                 self.canvas.set_draw_color(
-                    VideoDriver::color(data[row * CHIP8_WIDTH + col])
+                    VideoDriver::color(data[(x, y)])
                 );
 
                 self.canvas.fill_rect(
                     Rect::new(
-                        (col*DISPLAY_SCALE) as i32,
-                        (row*DISPLAY_SCALE) as i32,
+                        (x * DISPLAY_SCALE) as i32,
+                        (y * DISPLAY_SCALE) as i32,
                         DISPLAY_SCALE as u32,
                         DISPLAY_SCALE as u32
                     )
