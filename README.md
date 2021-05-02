@@ -1,6 +1,6 @@
 # chippy
 
-CHIP-8 Interpreter written in Rust.
+CHIP-8 Interpreter written in Rust. Still needs improvement. Any feedback is more than welcome.
 
 # Dependencies
 
