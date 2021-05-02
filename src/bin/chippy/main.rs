@@ -27,7 +27,7 @@ use std::fs::File;
 
 use clap::{Arg, App};
 
-use chippy::emulator::Emulator;
+use chippy::emulator::{Emulator, ROM_SIZE};
 
 fn main() -> Result<(), String> {
     let matches = App::new("CHIP-8 interpreter written in Rust.")
@@ -42,9 +42,8 @@ fn main() -> Result<(), String> {
 
     let file_name = matches.value_of("file_name").unwrap();
     let mut f = File::open(file_name).map_err(|e| e.to_string())?;
-    let mut buffer = Vec::new();
-
-    f.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
+    let mut buffer = [0_u8; ROM_SIZE];
+    f.read(&mut buffer).map_err(|e| e.to_string())?;
 
     Emulator::run(buffer)
 }

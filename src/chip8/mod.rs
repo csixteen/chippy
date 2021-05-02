@@ -1,2 +1,3 @@
 pub mod cpu;
-pub mod opcodes;
+mod opcodes;
+mod mem;

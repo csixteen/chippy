@@ -24,15 +24,21 @@
 
 use std::ops::{Index,IndexMut};
 
-pub(crate) const CHIP8_WIDTH: usize   = 64;
-pub(crate) const CHIP8_HEIGHT: usize  = 32;
-const STACK_SIZE: usize               = 16;
-const ROM_OFFSET: usize               = 0x200;
+use super::mem::{
+    AddressSpace,
+    Memory,
+    RESERVED_MEMORY_SIZE,
+    ROM_SIZE
+};
+
+pub(crate) const CHIP8_WIDTH: usize  = 64;
+pub(crate) const CHIP8_HEIGHT: usize = 32;
+const STACK_SIZE: usize              = 16;
 
 pub(super) enum ProgramCounter {
     Next,
     Skip,
-    Address(usize),
+    Address(u16),
 }
 
 impl ProgramCounter {
@@ -66,21 +72,21 @@ impl IndexMut<usize> for Display {
 
 #[derive(Default)]
 pub struct Cpu {
-    pub(super) mem: Vec<u8>,
-    pub(super) stack: [usize; STACK_SIZE],
+    pub(super) mem: Memory,
+    pub(super) stack: [u16; STACK_SIZE],
 
     // Registers - the register VF shouldn't be
     // used by programs, as it is used as a flag
     // by some instructions
-    pub(super) v_reg: [u8; 16],  // V0..VF
-    pub(super) i: usize,         // used to store memory addresses. Only the lowest 12 bits are used
+    pub(super) v_reg: [u8; 16],
+    pub(super) i: u16,
 
     // Timers
     pub(super) delay_t: u8,  // delay timer
     pub(super) sound_t: u8,  // sound timer
 
     // Pseudo-registers (not directly accessible to the user)
-    pub(super) pc: usize,  // Program Counter
+    pub(super) pc: u16,  // Program Counter
     pub(super) sp: usize,  // Stack-Pointer
 
     // +---------------+
@@ -100,15 +106,10 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(rom: Vec<u8>) -> Self {
-        let mut mem = vec![0_u8; 4096];
-
-        (0..FONT_DATA.len()).for_each(|i| { mem[i] = FONT_DATA[i]; });
-        (0..rom.len()).for_each(|i| { mem[ROM_OFFSET + i] = rom[i]; });
-
+    pub fn new(rom: [u8; ROM_SIZE]) -> Self {
         Cpu {
-            pc: ROM_OFFSET,
-            mem: mem,
+            pc: RESERVED_MEMORY_SIZE as u16, // Initialize the ProgramCounter at 0x200
+            mem: Memory::new(rom),
             ..Default::default()
         }
     }
@@ -130,11 +131,10 @@ impl Cpu {
     }
 
     fn fetch_opcode(&self) -> u16 {
-        (self.mem[self.pc] as u16) << 8 |
-            (self.mem[self.pc + 1] as u16)
+        self.mem.read_word(self.pc)
     }
 
-    fn execute_instruction(&mut self, opcode: u16) -> usize {
+    fn execute_instruction(&mut self, opcode: u16) -> u16 {
         let parts = (
             ((opcode & 0xF000) >> 12) as usize,
             ((opcode & 0x0F00) >> 8) as usize,
@@ -144,7 +144,7 @@ impl Cpu {
 
         let vx = parts.1;
         let vy = parts.2;
-        let nnn = (opcode & 0xFFF) as usize;
+        let nnn = opcode & 0xFFF;
         let kk = (opcode & 0xFF) as u8;
         let n = (opcode & 0xF) as usize;
 
@@ -197,28 +197,6 @@ impl Cpu {
         self.keypad.iter().position(|&k| k)
     }
 }
-
-//
-// Preloaded sprite data representing a font of sixteen
-// hexadecimal digits.
-const FONT_DATA: [u8; 80] = [
-    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-    0x20, 0x60, 0x20, 0x20, 0x70, // 1
-    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-    0xF0, 0x80, 0xF0, 0x80, 0x80, // F
-];
 
 #[cfg(test)]
 mod tests {

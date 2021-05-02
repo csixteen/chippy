@@ -30,8 +30,9 @@ use super::cpu::{
     Cpu,
     ProgramCounter
 };
+use super::mem::AddressSpace;
 
-const SPRITE_SIZE: usize = 5;  // size in bytes
+const SPRITE_SIZE: u8 = 5; // size in bytes
 
 impl Cpu {
     // 00E0 - CLS
@@ -52,13 +53,13 @@ impl Cpu {
 
     // 1nnn - JP addr
     // Jump to location nnn.
-    pub(super) fn execute_JP_addr(&mut self, nnn: usize) -> ProgramCounter {
+    pub(super) fn execute_JP_addr(&mut self, nnn: u16) -> ProgramCounter {
         ProgramCounter::Address(nnn)
     }
 
     // 2nnn - CALL addr
     // Call subroutine at nnn.
-    pub(super) fn execute_CALL_addr(&mut self, nnn: usize) -> ProgramCounter {
+    pub(super) fn execute_CALL_addr(&mut self, nnn: u16) -> ProgramCounter {
         self.stack[self.sp] = self.pc + 2;
         self.sp += 1;
         ProgramCounter::Address(nnn)
@@ -175,15 +176,15 @@ impl Cpu {
 
     // Annn - LD I, addr
     // Set I = nnn.
-    pub(super) fn execute_LD_I_addr(&mut self, nnn: usize) -> ProgramCounter {
+    pub(super) fn execute_LD_I_addr(&mut self, nnn: u16) -> ProgramCounter {
         self.i = nnn;
         ProgramCounter::Next
     }
 
     // Bnnn - JP V0, addr
     // Jump to location nnn + V0.
-    pub(super) fn execute_JP_V0_addr(&mut self, nnn: usize) -> ProgramCounter {
-        ProgramCounter::Address(nnn + (self.v_reg[0x0] as usize))
+    pub(super) fn execute_JP_V0_addr(&mut self, nnn: u16) -> ProgramCounter {
+        ProgramCounter::Address(nnn + (self.v_reg[0x0] as u16))
     }
 
     // Cxkk - RND Vx, byte
@@ -203,7 +204,7 @@ impl Cpu {
             for col in 0..8 {
                 let dx = (col + self.v_reg[vx] as usize) % CHIP8_WIDTH;
                 let dy = (row + self.v_reg[vy] as usize) % CHIP8_HEIGHT;
-                let color = (self.mem[self.i + row] >> (7 - col)) & 1;
+                let color = (self.mem.read_byte(self.i + (row as u16)) >> (7 - col)) & 1;
                 self.v_reg[0xF] |= color & self.display[dy * CHIP8_WIDTH + dx];
                 self.display[dy * CHIP8_WIDTH + dx] ^= color;
             }
@@ -261,7 +262,7 @@ impl Cpu {
     // Fx1E - ADD I, Vx
     // Set I = I + Vx.
     pub(super) fn execute_ADD_I_Vx(&mut self, vx: usize) -> ProgramCounter {
-        let v = self.i + (self.v_reg[vx] as usize);
+        let v = self.i + (self.v_reg[vx] as u16);
         self.v_reg[0xF] = (v > 0xF00) as u8;
         self.i = v;
         ProgramCounter::Next
@@ -270,7 +271,7 @@ impl Cpu {
     // Fx29 - LD F, Vx
     // Set I = location of sprite for digit Vx.
     pub(super) fn execute_LD_F_Vx(&mut self, vx: usize) -> ProgramCounter {
-        self.i = (self.v_reg[vx] as usize) * SPRITE_SIZE;
+        self.i = (self.v_reg[vx] * SPRITE_SIZE) as u16;
         ProgramCounter::Next
     }
 
@@ -278,9 +279,9 @@ impl Cpu {
     // Store BCD representation of Vx in memory locations I, I+1, and I+2.
     pub(super) fn execute_LD_B_Vx(&mut self, vx: usize) -> ProgramCounter {
         let value_x = self.v_reg[vx];
-        self.mem[self.i] = value_x / 100;
-        self.mem[self.i + 1] = (value_x % 100) / 10;
-        self.mem[self.i + 2] = value_x % 10;
+        self.mem.write_byte(value_x / 100, self.i);
+        self.mem.write_byte((value_x % 100) / 10, self.i + 1);
+        self.mem.write_byte(value_x % 10, self.i + 2);
         ProgramCounter::Next
     }
 
@@ -288,7 +289,7 @@ impl Cpu {
     // Store registers V0 through Vx in memory starting at location I.
     pub(super) fn execute_LD_I_Vx(&mut self, vx: usize) -> ProgramCounter {
         (0..=vx).for_each(|i| {
-            self.mem[self.i + i] = self.v_reg[i];
+            self.mem.write_byte(self.v_reg[i], self.i + (i as u16));
         });
         ProgramCounter::Next
     }
@@ -297,7 +298,7 @@ impl Cpu {
     // Read registers V0 through Vx from memory starting at location I.
     pub(super) fn execute_LD_Vx_I(&mut self, vx: usize) -> ProgramCounter {
         (0..=vx).for_each(|i| {
-            self.v_reg[i] = self.mem[self.i + i];
+            self.v_reg[i] = self.mem.read_byte(self.i + (i as u16));
         });
         ProgramCounter::Next
     }
