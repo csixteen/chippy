@@ -25,14 +25,12 @@ extern crate sdl2;
 use std::thread;
 use std::time::Duration;
 
+pub use crate::chip8::mem::ROM_SIZE;
 use crate::chip8::cpu::Cpu;
 use crate::drivers::audio::AudioDriver;
 use crate::drivers::keyboard::KeyboardDriver;
 use crate::drivers::video::VideoDriver;
 
-// The maximum size of a ROM is the difference between CHIP-8's
-// memory (4096 bytes) and the reserved memory (512 bytes).
-pub const ROM_SIZE: usize = 3584;
 const SLEEP: u64 = 1;
 
 pub struct Emulator;

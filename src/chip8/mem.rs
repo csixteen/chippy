@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 pub(super) const RESERVED_MEMORY_SIZE: usize = 512;
-pub(super) const ROM_SIZE: usize = 3584;
+pub const ROM_SIZE: usize = 3584;
 
 pub(super) trait AddressSpace {
     fn read_byte(&self, addr: u16) -> u8;
