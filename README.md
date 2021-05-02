@@ -38,3 +38,7 @@ And here is a list of some of the projects that I've read and used as a source o
 - [Starr Horne's CHIP-8 emulator in Rust](https://github.com/starrhorne/chip8-rust)
 - [Michael Burge's NES emulator in Rust](https://github.com/MichaelBurge/nes-emulator)
 - [Imran Nazar's GameBoy emulator in JavaScript](https://github.com/Two9A/jsGB)
+
+# License
+
+See [LICENSE](LICENSE).
