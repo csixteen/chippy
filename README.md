@@ -2,8 +2,6 @@
 
 CHIP-8 Interpreter written in Rust.
 
-Most of the code for input (keyboard) and output (audio and display) was shamelessly copied from the examples found in [rust-sdl2](https://github.com/Rust-SDL2/rust-sdl2) repository.
-
 # Usage
 
 You'll definitely need to install the [SDL2.0 Development Libraries](https://www.libsdl.org/). I'd suggest for you to check [rust-sdl2](https://github.com/Rust-SDL2/rust-sdl2)'s README, since it covers scenarios that may be relevant to you. Once you have SDL2 installed, you can simply run:
@@ -22,30 +20,6 @@ This definitely needs more coverage, but I wrote some simple tests just to give 
 $ cargo test
 ```
 
-# Project structure
-
-This is what you'll find in the box:
-
-```
-.
-├── bin
-│   └── chippy
-│       └── main.rs
-├── chip8
-│   ├── cpu.rs
-│   ├── mod.rs
-│   └── opcodes.rs
-├── drivers
-│   ├── audio.rs
-│   ├── keyboard.rs
-│   ├── mod.rs
-│   └── video.rs
-├── emulator.rs
-└── lib.rs
-```
-
-There is nothing super fancy. I tried to keep the code as simple as possible. After having read lots of code from other emulators out there (in several languages), this is the structure that made more sense to me. Inside `chip8` directory, you'll find the actual representation and implementation of the (sort of) CPU. Essentially, this is the piece responsible for executing instructions and storing the state in memory (including display memory), stack or registers. On the other hand, the `emulator` is what turns that state into something visible (or audible). It glues together the CHIP-8 interpreter (emulator, whatever you want to call it) and the drivers for Audio, Display and Input (only Keyboard). Those drivers use the SDL2 bindings for Rust to display the actual graphics, produce sound and capture input from the keyboard.
-
 # Screenshots
 
 ![alt text](screenshots/Space_Invaders.png)
@@ -56,3 +30,11 @@ There is nothing super fancy. I tried to keep the code as simple as possible. Af
 - [Matthew Mikolay's CHIP-8 Technical Reference](https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Technical-Reference)
 - [Collection of CHIP-8 related documentation](https://github.com/trapexit/chip-8_documentation)
 - [Awesome CHIP-8](https://chip-8.github.io/links/)
+
+And here is a list of some of the projects that I've read and used as a source of inspiration. I didn't copy any of the code, but some names may be exactly the same simply because there was no better alternative.
+
+- [Laurence Muller's CHIP-8 emulator in C++](https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/)
+- [Steve Losh's CHIP-8 emulator in Common Lisp](https://github.com/sjl/cl-chip8)
+- [Starr Horne's CHIP-8 emulator in Rust](https://github.com/starrhorne/chip8-rust)
+- [Michael Burge's NES emulator in Rust](https://github.com/MichaelBurge/nes-emulator)
+- [Imran Nazar's GameBoy emulator in JavaScript](https://github.com/Two9A/jsGB)
