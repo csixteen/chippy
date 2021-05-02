@@ -33,17 +33,16 @@ pub(crate) trait AddressSpace {
     }
 }
 
-#[derive(Default)]
 pub(crate) struct Memory {
     reserved: ReservedMemory,
-    rom: Rom
+    rom: Box<dyn AddressSpace>,
 }
 
 impl Memory {
-    pub fn new(rom: [u8; ROM_SIZE]) -> Self {
+    pub fn new(rom: Box<dyn AddressSpace>) -> Self {
         Memory {
             reserved: ReservedMemory::new(),
-            rom: Rom(rom)
+            rom: rom
         }
     }
 }
@@ -89,10 +88,16 @@ impl AddressSpace for ReservedMemory {
     }
 }
 
-struct Rom([u8; ROM_SIZE]);
+pub(crate) struct Rom([u8; ROM_SIZE]);
 
 impl Default for Rom {
     fn default() -> Self { Rom([0_u8; ROM_SIZE]) }
+}
+
+impl Rom {
+    pub fn new(rom: [u8; ROM_SIZE]) -> Self {
+        Rom(rom)
+    }
 }
 
 impl AddressSpace for Rom {

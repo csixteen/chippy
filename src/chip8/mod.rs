@@ -23,3 +23,10 @@
 pub mod cpu;
 pub mod mem;
 mod opcodes;
+
+use cpu::Cpu;
+use mem::{Memory,Rom};
+
+pub(crate) fn new_chip8(rom: [u8; mem::ROM_SIZE]) -> Cpu {
+    Cpu::new(Box::new(Memory::new(Box::new(Rom::new(rom)))))
+}
