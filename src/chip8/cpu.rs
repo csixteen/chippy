@@ -115,7 +115,7 @@ impl Cpu {
     }
 
     pub fn fetch_decode_execute(&mut self) {
-        let opcode = self.fetch_opcode();
+        let opcode = self.mem.read_word(self.pc);
 
         self.pc = self.execute_instruction(opcode);
 
@@ -128,10 +128,6 @@ impl Cpu {
         }
 
         self.beep = self.sound_t > 0;
-    }
-
-    fn fetch_opcode(&self) -> u16 {
-        self.mem.read_word(self.pc)
     }
 
     fn execute_instruction(&mut self, opcode: u16) -> u16 {
