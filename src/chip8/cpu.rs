@@ -43,7 +43,7 @@ pub(super) enum ProgramCounter {
 impl ProgramCounter {
     /// If the condition is true, then the Program Counter will
     /// skip the next instruction, otherwise it won't.
-    pub(super) fn skip_if(cond: bool) -> ProgramCounter {
+    pub fn skip_if(cond: bool) -> ProgramCounter {
         if cond { ProgramCounter::Skip }
         else { ProgramCounter::Next }
     }
@@ -73,7 +73,7 @@ impl IndexMut<(usize, usize)> for Display {
     }
 }
 
-pub struct Cpu {
+pub(crate) struct Cpu {
     pub(super) mem: Box<dyn AddressSpace>,
     /// 16-level stack used to store memory addresses where the interpreter
     /// should return to when a subroutine is complete.
@@ -110,15 +110,15 @@ pub struct Cpu {
     // +---+---+---+---+
     // | A | 0 | B | F |
     // +---+---+---+---+
-    pub(crate) keypad: [bool; 16],  // 16-key hexadecimal keypad
-    pub(crate) display: Display,
+    pub keypad: [bool; 16],  // 16-key hexadecimal keypad
+    pub display: Display,
 
-    pub(crate) draw: bool,
-    pub(crate) beep: bool,
+    pub draw: bool,
+    pub beep: bool,
 }
 
 impl Cpu {
-    pub(crate) fn new(m: Box<dyn AddressSpace>) -> Self {
+    pub fn new(m: Box<dyn AddressSpace>) -> Self {
         Cpu {
             mem: m,
             stack: [0_u16; STACK_SIZE],

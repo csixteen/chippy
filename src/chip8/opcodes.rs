@@ -302,7 +302,3 @@ impl Cpu {
         ProgramCounter::Next
     }
 }
-
-#[cfg(test)]
-mod tests {
-}
