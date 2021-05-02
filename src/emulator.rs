@@ -26,6 +26,7 @@ use std::thread;
 use std::time::Duration;
 
 pub use crate::chip8::mem::ROM_SIZE;
+use crate::chip8::mem::Memory;
 use crate::chip8::cpu::Cpu;
 use crate::drivers::audio::AudioDriver;
 use crate::drivers::keyboard::KeyboardDriver;
@@ -33,13 +34,17 @@ use crate::drivers::video::VideoDriver;
 
 const SLEEP: u64 = 1;
 
+/// Unit struct that only provides one method.
 pub struct Emulator;
 
 impl Emulator {
+    /// Runs the CHIP-8 emulator with the provided ROM until the
+    /// ESC key is pressed (or until it crashes, which may also
+    /// happen).
     pub fn run(rom: [u8; ROM_SIZE]) -> Result<(), String> {
         let sdl_context = sdl2::init()?;
 
-        let mut chip8 = Cpu::new(rom);
+        let mut chip8 = Cpu::new(Box::new(Memory::new(rom)));
         let mut keyboard = KeyboardDriver::new(&sdl_context);
         let mut video = VideoDriver::new(&sdl_context);
         let audio = AudioDriver::new(&sdl_context);

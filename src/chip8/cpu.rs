@@ -24,17 +24,16 @@
 
 use std::ops::{Index,IndexMut};
 
-use super::mem::{
-    AddressSpace,
-    Memory,
-    RESERVED_MEMORY_SIZE,
-    ROM_SIZE
-};
+use super::mem::{AddressSpace, RESERVED_MEMORY_SIZE};
 
 pub(crate) const CHIP8_WIDTH: usize  = 64;
 pub(crate) const CHIP8_HEIGHT: usize = 32;
 const STACK_SIZE: usize              = 16;
 
+/// Indicates how the Program Counter will change after a certain
+/// instruction is executed: it may advance to the next instruction,
+/// it may skip to the next instruction or it may jump to a specific
+/// address.
 pub(super) enum ProgramCounter {
     Next,
     Skip,
@@ -42,12 +41,16 @@ pub(super) enum ProgramCounter {
 }
 
 impl ProgramCounter {
+    /// If the condition is true, then the Program Counter will
+    /// skip the next instruction, otherwise it won't.
     pub(super) fn skip_if(cond: bool) -> ProgramCounter {
         if cond { ProgramCounter::Skip }
         else { ProgramCounter::Next }
     }
 }
 
+/// Represents the 64x32 monochrome display. Individual pixels are accessed
+/// by indexing the Display using a tuple (x, y).
 pub(crate) struct Display([u8; CHIP8_HEIGHT * CHIP8_WIDTH]);
 
 impl Default for Display {
@@ -70,24 +73,33 @@ impl IndexMut<(usize, usize)> for Display {
     }
 }
 
-#[derive(Default)]
 pub struct Cpu {
-    pub(super) mem: Memory,
+    pub(super) mem: Box<dyn AddressSpace>,
+    /// 16-level stack used to store memory addresses where the interpreter
+    /// should return to when a subroutine is complete.
     pub(super) stack: [u16; STACK_SIZE],
 
-    // Registers - the register VF shouldn't be
-    // used by programs, as it is used as a flag
-    // by some instructions
+    /// 16 8-bit registers from V0 to VF. The register VF shouldn't be
+    /// used directly by the applications, as it is used as a flag register
+    /// by some instructions.
     pub(super) v_reg: [u8; 16],
+    /// 16-bit register used to hold memory addresses.
     pub(super) i: u16,
 
-    // Timers
-    pub(super) delay_t: u8,  // delay timer
-    pub(super) sound_t: u8,  // sound timer
+    /// Delay timer register. The delay timer is active whenever this register
+    /// is non-zero. According to the specs, its value should be substracted
+    /// by 1 at a rate of 60Hz, until it reaches 0. When this happens, the delay
+    /// timer deactivates.
+    pub(super) delay_t: u8,
+    /// Sound timer register. Its value also decrements at a rate of 60Hz. As long
+    /// as its value is greater than zero, the CHIP-8 buzzer should produce a sound.
+    pub(super) sound_t: u8,
 
-    // Pseudo-registers (not directly accessible to the user)
-    pub(super) pc: u16,  // Program Counter
-    pub(super) sp: usize,  // Stack-Pointer
+    /// The Program Counter holds holds the memory address of
+    /// the next instruction to be executed.
+    pub(super) pc: u16,
+    /// Stack Pointer points to the top of the stack.
+    pub(super) sp: usize,
 
     // +---------------+
     // | 1 | 2 | 3 | C |
@@ -99,21 +111,35 @@ pub struct Cpu {
     // | A | 0 | B | F |
     // +---+---+---+---+
     pub(crate) keypad: [bool; 16],  // 16-key hexadecimal keypad
-
     pub(crate) display: Display,
+
     pub(crate) draw: bool,
     pub(crate) beep: bool,
 }
 
 impl Cpu {
-    pub fn new(rom: [u8; ROM_SIZE]) -> Self {
+    pub(crate) fn new(m: Box<dyn AddressSpace>) -> Self {
         Cpu {
+            mem: m,
+            stack: [0_u16; STACK_SIZE],
+            v_reg: [0_u8; 16],
+            i: 0,
+            delay_t: 0,
+            sound_t: 0,
             pc: RESERVED_MEMORY_SIZE as u16, // Initialize the ProgramCounter at 0x200
-            mem: Memory::new(rom),
-            ..Default::default()
+            sp: 0,
+            keypad: [false; 16],
+            display: Display::default(),
+            draw: false,
+            beep: false
         }
     }
 
+    /// Like the name indicates, it fetches the next instruction to be executed
+    /// (located in the address stored in the Program Counter), it decodes the
+    /// instruction (parse the operands) and executes it. Since each Opcode is
+    /// 2 bytes, the instruction is stored in two adjacent memory addresses:
+    /// PC and PC + 1.
     pub fn fetch_decode_execute(&mut self) {
         let opcode = self.mem.read_word(self.pc);
 
@@ -191,68 +217,5 @@ impl Cpu {
 
     pub(super) fn is_key_pressed(&self) -> Option<usize> {
         self.keypad.iter().position(|&k| k)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const TEST_ROM: [u8; 20] = [
-        0x61, 0x01,  // Sets V1 to 0x1
-        0x71, 0x01,  // V1 = V1 + 0x1
-        0x31, 0x00,  // Skips next instruction if V1 == 0x0
-        0x12, 0x02,  // PC = 0x0202
-        0x61, 0x01,  // Sets V1 to 0x1
-        0x62, 0xFF,  // Sets V2 to 0xFF
-        0x81, 0x24,  // Sets V1 to V1 + V2. VF should be set to 0x1
-        0xB2, 0x12,  // PC = V0 + 0x212
-        0xC2, 0x30,  // V2 = rand byte AND 0x30 (should be skipped because of last instruction)
-        0xFF, 0x1E,  // I = I + VF (should be 0x1)
-    ];
-
-    #[test]
-    fn test_new_chip8() {
-        let mut c = Chip8::new(TEST_ROM.to_vec());
-
-        assert_eq!(0x200, c.pc);
-        assert_eq!(0x61, c.mem[c.pc as usize]);
-
-        c.fetch_decode_execute();
-        assert_eq!(0x202, c.pc);
-        assert_eq!(0x1, c.v_reg[0x1]);
-
-        for i in 0..=253 {
-            c.fetch_decode_execute();
-            assert_eq!(0x204, c.pc);
-            assert_eq!(0x2 + (i as u8), c.v_reg[0x1]);
-
-            c.fetch_decode_execute();
-            assert_eq!(0x206, c.pc);
-
-            c.fetch_decode_execute();
-            assert_eq!(c.pc, 0x202);
-        }
-
-        c.fetch_decode_execute();
-        assert_eq!(0x204, c.pc);
-        assert_eq!(0x0, c.v_reg[0x1]);
-
-        c.fetch_decode_execute();
-        assert_eq!(0x208, c.pc);
-
-        c.fetch_decode_execute();
-        assert_eq!(0x20A, c.pc);
-        assert_eq!(0x1, c.v_reg[0x1]);
-
-        c.fetch_decode_execute();
-        assert_eq!(0x20C, c.pc);
-        assert_eq!(0xFF, c.v_reg[0x2]);
-
-        c.fetch_decode_execute();
-        assert_eq!(0x20E, c.pc);
-        assert_eq!(0x0, c.v_reg[0x1]);
-        assert_eq!(0xFF, c.v_reg[0x2]);
-        assert_eq!(0x1, c.v_reg[0xF]);
     }
 }

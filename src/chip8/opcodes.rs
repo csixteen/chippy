@@ -30,7 +30,6 @@ use super::cpu::{
     Cpu,
     ProgramCounter
 };
-use super::mem::AddressSpace;
 
 const SPRITE_SIZE: u8 = 5; // size in bytes
 
@@ -302,4 +301,8 @@ impl Cpu {
         });
         ProgramCounter::Next
     }
+}
+
+#[cfg(test)]
+mod tests {
 }

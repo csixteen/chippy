@@ -23,7 +23,7 @@
 pub(super) const RESERVED_MEMORY_SIZE: usize = 512;
 pub const ROM_SIZE: usize = 3584;
 
-pub(super) trait AddressSpace {
+pub(crate) trait AddressSpace {
     fn read_byte(&self, addr: u16) -> u8;
     fn write_byte(&mut self, value: u8, addr: u16);
 
@@ -34,7 +34,7 @@ pub(super) trait AddressSpace {
 }
 
 #[derive(Default)]
-pub(super) struct Memory {
+pub(crate) struct Memory {
     reserved: ReservedMemory,
     rom: Rom
 }
