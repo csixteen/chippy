@@ -169,10 +169,13 @@ mod tests {
 
     #[test]
     fn test_memory_mapper() {
-        let mm = Memory::new(Box::new(TestRom(TEST_ROM)));
+        let mut mm = Memory::new(Box::new(TestRom(TEST_ROM)));
 
         assert_eq!(0x61, mm.read_byte(RESERVED_MEMORY_SIZE as u16));
         assert_eq!(0x6101, mm.read_word(RESERVED_MEMORY_SIZE as u16));
+
+        mm.write_byte(0xF, RESERVED_MEMORY_SIZE as u16);
+        assert_eq!(0xF, mm.read_byte(RESERVED_MEMORY_SIZE as u16));
     }
 
     #[test]
