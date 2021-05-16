@@ -1,0 +1,6 @@
+status = [
+    "Done",
+]
+timeout_sec = 1800 # 30 mins
+use_squash_merge = true
+required_approvals = 1

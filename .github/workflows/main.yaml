@@ -1,22 +1,52 @@
-name: Rust
+name: CI
+
+permissions:
+  contents: read
 
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
   pull_request:
-    branches: [ main ]
-
-env:
-  CARGO_TERM_COLOR: always
+  push:
+    branches:
+      - staging
+      - trying
 
 jobs:
+
   build:
+    name: ${{ matrix.task.name }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: [stable]
+        task:
+          - name: Format
+            run: cargo fmt
+          - name: Clippy
+            run: cargo clippy
+          - name: Build
+            run: cargo build
+          - name: Test
+            run: cargo test
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Rust ${{ matrix.rust }}
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          profile: minimal
+          override: true
+          components: rustfmt, clippy
+
+      - name: ${{ matrix.task.name }}
+        run: ${{ matrix.task.run }}
+
+  done:
+    name: Done
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Install SDL2
-      run: sudo apt-get install libsdl2-dev libsdl2-gfx-dev
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - name: Done
+        run: echo Done
