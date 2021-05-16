@@ -31,7 +31,8 @@ jobs:
             run: cargo test
     steps:
       - uses: actions/checkout@v2
-
+      - name: Install SDL2
+        run: sudo apt-get install libsdl2-dev libsdl2-gfx-dev
       - name: Install Rust ${{ matrix.rust }}
         uses: actions-rs/toolchain@v1
         with:
