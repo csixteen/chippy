@@ -1,6 +1,6 @@
 # chippy
 
-CHIP-8 emulator written in Rust. This is intended to be a project for gaining experience writing emulators and practice Rust. As such, it still needs improvement and any feedback is more than welcome.
+CHIP-8 emulator written in Rust. This is intended to be a project for gaining experience writing emulators and practice Rust.
 
 # Dependencies
 
